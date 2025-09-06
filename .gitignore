@@ -1,0 +1,8 @@
+/build*
+/.vscode
+/cpm_modules
+.DS_Store
+ast.json
+.ast_cache
+.roxas_cache
+.credence_cache
