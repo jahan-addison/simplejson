@@ -1,6 +1,6 @@
 # simplejson
 
-simplejson is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson is a single C++ Header file, "simplejson.h". The library requires at least C++17.
+simplejson is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson is a single C++ Header file, "simplejson.h". The library requires at least C++20.
 
 > Based on version by `nbsdx`
 
