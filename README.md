@@ -4,7 +4,20 @@ simplejson is a lightweight JSON library for exporting data in JSON format from 
 
 > Based on version by `nbsdx`
 
-### Installation
+### Major changes
+
+* Removes most memory leaks
+* Compiles with Address, Undefined sanitizers; and `-Wall -Wextra -Werror -Wpedantic`
+* Uses `constexpr` and `const` where possible
+* cmake and cmake library installation via `FetchContent`
+* Removes all `new` and `delete`
+  * Uses `shared_ptr` where necessary, with no dangling pointers
+  * Replaces `union` and `nullptr` with `std::optional` and `std::variant`
+* New `json::JSON::dumpKeys` method to dump the keys of a `Class::Object`
+* Expose `get` method on `ArrayRange` to get underlying iterator
+
+
+## Installation
 
 Either copy the header file into your project, or use `FetchContent` in cmake such as below:
 
@@ -14,7 +27,7 @@ include(FetchContent)
 FetchContent_Declare(
     simplejson
     GIT_REPOSITORY https://github.com/jahan-addison/simplejson.git
-    GIT_TAG v1.0.0
+    GIT_TAG v1.1.0
 )
 
 FetchContent_MakeAvailable(simplejson)
