@@ -23,12 +23,7 @@ jobs:
     - name: Installation
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-10 llvm-20 clang-20 iwyu cppcheck clang-tidy
-        sudo update-alternatives \
-          --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 \
-          --slave /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-10 \
-          --slave /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-10 \
-          --slave /usr/bin/gcov gcov /usr/bin/gcov-10
+        sudo apt-get install -y llvm-20 clang-20 cppcheck clang-tidy
         sudo update-alternatives \
           --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-20 100 \
           --slave /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-20 \
@@ -37,7 +32,9 @@ jobs:
           --install /usr/bin/clang clang /usr/bin/clang-20 100
 
     - name: configure
-      run: cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined"
+      run: cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DBUILD_EXAMPLES=ON
 
     - name: build
-      run: cmake --build build -j4
+      run: |
+        cd build/
+        make

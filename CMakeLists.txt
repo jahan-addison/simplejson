@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.0.0
+  VERSION 1.1.0
   LANGUAGES CXX
 )
 
@@ -17,9 +17,9 @@ include(CMakeDependentOption)
 include(cmake/CPM.cmake)
 include(Warnings)
 
-cmake_dependent_option(${PROJECT_NAME}_BUILD_EXAMPLES
-    "Enable ${PROJECT_NAME} project tests targets" ON
-    "BUILD_EXAMPLES" ON
+cmake_dependent_option(BUILD_EXAMPLES
+    "Enable ${PROJECT_NAME} project tests targets" OFF
+    "BUILD_EXAMPLES" OFF
 )
 CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
@@ -43,7 +43,7 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:include>
 )
 
-if(${PROJECT_NAME}_BUILD_EXAMPLES)
+if(BUILD_EXAMPLES)
 
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cpp")
