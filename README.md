@@ -1,21 +1,32 @@
 # simplejson
 
-simplejson is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson is a single C++ Header file, "simplejson.h". The library requires at least C++20.
+simplejson is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson is a single C++ Header file, "simplejson.h".
 
-This library is based on the version by `nbsdx`, and primary created for my [B Compiler, Credence](https://github.com/jahan-addison/credence/).
+simplejson requires at least C++20.
 
-### Major changes
+This library was primarily created for my [B Compiler, Credence](https://github.com/jahan-addison/credence/).
 
-* [Removes memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17529039358/job/49783434847#step:5:661)
+---
+
+### Major Features
+
+* Very intuitive and easy-to-use for constructing json from scratch, or load from disk
+* [No memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17529039358/job/49783434847#step:5:661)
 * Compiles with Address, Undefined sanitizers; valgrind; and `-Wall -Wextra -Werror -Wpedantic`
 * Uses `constexpr` and `const` where possible
-* cmake and enable cmake library installation via `FetchContent`
-* Removes all uses of `new` and `delete`
+* cmake and enables cmake library installation via `FetchContent`
+* No use of `new` and `delete`
   * Uses `shared_ptr` where necessary, with no dangling pointers
-  * Replaces `nullptr` and `union` with `std::optional` and `std::variant`
-* New `json::JSON::dumpKeys` method to dump the keys of a `Class::Object`
-* Expose `get` method on `ArrayRange` to get underlying iterator
+* Exposes `get` method on `ArrayRange` to get underlying iterator of an `JSON::Array`
 
+### Main Methods
+
+* `json::JSON::Load` static method to load large JSON from files or strings
+* `json::JSON::dump` method to pretty-print json
+
+* `json::JSON::dumpKeys` method to dump the keys of a `Class::Object`
+
+See more examples below and in `examples/` directory.
 
 ## Installation
 
@@ -27,7 +38,7 @@ include(FetchContent)
 FetchContent_Declare(
     simplejson
     GIT_REPOSITORY https://github.com/jahan-addison/simplejson.git
-    GIT_TAG v1.1.0
+    GIT_TAG v1.1.1
 )
 
 FetchContent_MakeAvailable(simplejson)
