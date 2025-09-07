@@ -59,6 +59,11 @@ concept Object_Variant =
     std::same_as<T, JSON_Deque> || std::same_as<T, JSON_String> ||
     std::same_as<T, JSON_Map>;
 
+template<typename T>
+concept Object_Variant_Pointer =
+    std::same_as<T, JSON_Deque_PTR> || std::same_as<T, JSON_String_PTR> ||
+    std::same_as<T, JSON_Map_PTR>;
+
 constexpr std::string json_escape(const std::string& str)
 {
     std::string output;
@@ -93,98 +98,15 @@ constexpr std::string json_escape(const std::string& str)
 }
 
 template<Object_Variant Type>
-std::shared_ptr<Type> make_data_object(Type const& obj)
+inline std::shared_ptr<Type> make_data_object(Type const& obj)
 {
     return std::make_shared<Type>(obj);
 }
 
-}
+} // namespace
 
 class JSON
 {
-    inline friend std::ostream& operator<<(std::ostream& os, const JSON& json)
-    {
-        os << json.dump();
-        return os;
-    }
-
-    inline auto make_empty_map() const noexcept
-    {
-        return std::map<std::string, JSON>{};
-    }
-
-    template<Object_Variant Type>
-    friend std::optional<std::shared_ptr<Type>> make_data_object()
-    {
-        if constexpr (std::is_same_v<Type, JSON_Map>) {
-            return std::make_shared<Type>(std::map<std::string, JSON>{});
-        } else if constexpr (std::is_same_v<Type, JSON_String>) {
-            return std::make_shared<Type>(std::string{});
-        } else if constexpr (std::is_same_v<Type, JSON_Deque>) {
-            return std::make_shared<JSON_Deque>(std::deque<JSON>{});
-        } else {
-            return std::make_shared<Type>(std::deque<JSON>{});
-        }
-    }
-    inline auto make_empty_list() const noexcept { return std::deque<JSON>{}; }
-
-    inline auto make_empty_string() const noexcept { return std::string{}; }
-
-    struct BackingData
-    {
-        BackingData() = default;
-        explicit BackingData(long i)
-            : data_{ i }
-        {
-        }
-        explicit BackingData(double i)
-            : data_{ i }
-        {
-        }
-        explicit BackingData(bool i)
-            : data_{ i }
-        {
-        }
-        explicit BackingData(std::string const& i)
-            : String(make_data_object<JSON_String>(i))
-        {
-        }
-
-        using data =
-            std::variant<std::monostate, long, double, bool, std::string>;
-        using object = std::variant<JSON_Deque, JSON_String, JSON_Map>;
-        std::optional<JSON_Deque_PTR> List{};
-        std::optional<JSON_String_PTR> String{};
-        std::optional<JSON_Map_PTR> Map{};
-        data data_ = std::monostate();
-    };
-
-    template<Object_Variant Type>
-    constexpr Type get_safe_data_object(
-        std::optional<std::shared_ptr<Type>> const& obj)
-    {
-        if constexpr (std::is_same_v<Type, JSON_Map>) {
-            if (obj.has_value())
-                return *(obj.value());
-            else
-                return make_empty_map();
-        }
-        if constexpr (std::is_same_v<Type, JSON_String>) {
-            if (obj.has_value())
-                return *(obj.value());
-            else
-                return make_empty_string();
-        }
-        if constexpr (std::is_same_v<Type, JSON_Deque>) {
-            if (obj.has_value())
-                return *(obj.value());
-            else
-                return make_empty_list();
-        }
-    }
-
-    mutable BackingData Internal{};
-
   public:
     enum class Class
     {
@@ -197,119 +119,40 @@ class JSON
         Boolean
     };
 
-    template<Object_Variant Container>
-    class JSONWrapper
-    {
-        using Container_PTR = std::shared_ptr<Container>;
-        std::optional<Container_PTR> object;
-
-      public:
-        explicit JSONWrapper(Container_PTR val)
-            : object(val)
-        {
-        }
-        explicit JSONWrapper() = default;
-
-        inline Container_PTR get() const { return object.value(); }
-
-        typename Container::iterator begin()
-        {
-            return object ? object.value()->begin()
-                          : typename Container::iterator();
-        }
-        typename Container::iterator end()
-        {
-            return object ? object.value()->end()
-                          : typename Container::iterator();
-        }
-        typename Container::const_iterator begin() const
-        {
-            return object ? object.value()->begin()
-                          : typename Container::iterator();
-        }
-        typename Container::const_iterator end() const
-        {
-            return object ? object.value()->end()
-                          : typename Container::iterator();
-        }
-    };
-
-    template<Object_Variant Container>
-    class JSONConstWrapper
-    {
-        using Container_PTR = std::shared_ptr<Container>;
-        std::optional<Container_PTR> object;
-
-      public:
-        explicit JSONConstWrapper(Container_PTR const val)
-            : object(val)
-        {
-        }
-        explicit JSONConstWrapper()
-            : object(std::nullopt)
-        {
-        }
-
-        inline const Container_PTR get() const { return object.value(); }
-
-        JSON& operator[](int index) const { return object.value()->at(index); }
-
-        typename Container::const_iterator begin() const
-        {
-            return object ? object.value()->begin()
-                          : typename Container::const_iterator();
-        }
-        typename Container::const_iterator end() const
-        {
-            return object ? object.value()->end()
-                          : typename Container::const_iterator();
-        }
-    };
-
+  public:
     JSON()
         : Internal()
         , Type(Class::Null)
     {
     }
 
+    ~JSON() = default;
+
     explicit JSON(initializer_list<JSON> list)
         : JSON()
     {
         SetType(Class::Object);
-        for (auto i = list.begin(), e = list.end(); i != e; ++i, ++i)
-            operator[](i->ToString()) = *std::next(i);
+        for (auto const& i : list) {
+            this->operator[](i.ToString()) = i;
+        }
     }
 
     explicit JSON(JSON&& other)
-        : Internal(other.Internal)
-        , Type(other.Type)
+        : Internal(std::move(other.Internal))
+        , Type(std::move(other.Type))
     {
-        other.Type = Class::Null;
     }
 
     JSON const& operator=(JSON&& other)
     {
-        Internal = other.Internal;
-        Type = other.Type;
-        other.Type = Class::Null;
+        Internal = std::move(other.Internal);
+        Type = std::move(other.Type);
         return *this;
     }
 
     JSON(const JSON& other)
+        : Internal(other.Internal)
     {
-        switch (other.Type) {
-            case Class::Object:
-                Internal.Map = other.Internal.Map;
-                break;
-            case Class::Array:
-                Internal.List = other.Internal.List;
-                break;
-            case Class::String:
-                Internal.String = other.Internal.String;
-                break;
-            default:
-                Internal = other.Internal;
-        }
         Type = other.Type;
     }
 
@@ -318,24 +161,10 @@ class JSON
         if (this == &other) {
             return *this;
         }
-        switch (other.Type) {
-            case Class::Object:
-                Internal.Map = other.Internal.Map;
-                break;
-            case Class::Array:
-                Internal.List = other.Internal.List;
-                break;
-            case Class::String:
-                Internal.String = other.Internal.String;
-                break;
-            default:
-                Internal = other.Internal;
-        }
+        Internal = other.Internal;
         Type = other.Type;
         return *this;
     }
-
-    ~JSON() = default;
 
     template<typename T>
     explicit JSON(
@@ -375,6 +204,188 @@ class JSON
     {
     }
 
+  private:
+    struct internal
+    {
+        using data =
+            std::variant<std::monostate, long, double, bool, std::string>;
+        using object = std::variant<JSON_Deque, JSON_String, JSON_Map>;
+
+        internal() = default;
+
+        explicit internal(long i)
+            : data_{ i }
+        {
+        }
+        explicit internal(double i)
+            : data_{ i }
+        {
+        }
+        explicit internal(bool i)
+            : data_{ i }
+        {
+        }
+        explicit internal(std::string const& i)
+            : String(make_data_object<JSON_String>(i))
+        {
+        }
+
+        template<Object_Variant_Pointer Type>
+        explicit internal(Type&& i)
+        {
+            if constexpr (std::is_same_v<Type, JSON_Map>) {
+                Map = std::move(i);
+            } else if constexpr (std::is_same_v<Type, JSON_String>) {
+                String = std::move(i);
+            } else if constexpr (std::is_same_v<Type, JSON_Deque>) {
+                List = std::move(i);
+            }
+        }
+
+        std::optional<JSON_Deque_PTR> List{ std::nullopt };
+        std::optional<JSON_String_PTR> String{ std::nullopt };
+        std::optional<JSON_Map_PTR> Map{ std::nullopt };
+
+        data data_ = std::monostate();
+    };
+
+  public:
+    mutable internal Internal{};
+
+    inline friend std::ostream& operator<<(std::ostream& os, const JSON& json)
+    {
+        os << json.dump();
+        return os;
+    }
+
+    template<Object_Variant Type>
+    friend std::optional<std::shared_ptr<Type>> make_data_object()
+    {
+        if constexpr (std::is_same_v<Type, JSON_Map>) {
+            return std::make_shared<Type>(std::map<std::string, JSON>{});
+        } else if constexpr (std::is_same_v<Type, JSON_String>) {
+            return std::make_shared<Type>(std::string{});
+        } else if constexpr (std::is_same_v<Type, JSON_Deque>) {
+            return std::make_shared<JSON_Deque>(std::deque<JSON>{});
+        } else {
+            return std::make_shared<Type>(std::map<std::string, JSON>{});
+        }
+    }
+
+    inline auto make_empty_map() const noexcept
+    {
+        return std::map<std::string, JSON>{};
+    }
+    inline auto make_empty_list() const noexcept { return std::deque<JSON>{}; }
+
+    constexpr inline auto make_empty_string() const noexcept
+    {
+        return std::string{};
+    }
+
+    template<Object_Variant Type>
+    constexpr Type get_safe_data_object(
+        std::optional<std::shared_ptr<Type>> const& obj)
+    {
+        if constexpr (std::is_same_v<Type, JSON_Map>) {
+            if (obj.has_value())
+                return *(obj.value());
+            else
+                return make_empty_map();
+        }
+        if constexpr (std::is_same_v<Type, JSON_String>) {
+            if (obj.has_value())
+                return *(obj.value());
+            else
+                return make_empty_string();
+        }
+        if constexpr (std::is_same_v<Type, JSON_Deque>) {
+            if (obj.has_value())
+                return *(obj.value());
+            else
+                return make_empty_list();
+        }
+    }
+
+    template<Object_Variant Container>
+    class JSONWrapper
+    {
+        using Container_PTR = std::shared_ptr<Container>;
+        std::optional<Container_PTR> object;
+
+      public:
+        explicit JSONWrapper(Container_PTR val)
+            : object(val)
+        {
+        }
+        explicit JSONWrapper() = default;
+
+        constexpr inline Container_PTR get() const noexcept
+        {
+            return object.value();
+        }
+
+        constexpr inline typename Container::iterator begin() noexcept
+        {
+            return object ? object.value()->begin()
+                          : typename Container::iterator();
+        }
+        constexpr inline typename Container::iterator end() noexcept
+        {
+            return object ? object.value()->end()
+                          : typename Container::iterator();
+        }
+        constexpr inline typename Container::const_iterator begin()
+            const noexcept
+        {
+            return object ? object.value()->begin()
+                          : typename Container::iterator();
+        }
+        constexpr inline typename Container::const_iterator end() const noexcept
+        {
+            return object ? object.value()->end()
+                          : typename Container::iterator();
+        }
+    };
+
+    template<Object_Variant Container>
+    class JSONConstWrapper
+    {
+        using Container_PTR = std::shared_ptr<Container>;
+        std::optional<Container_PTR> object;
+
+      public:
+        explicit JSONConstWrapper(Container_PTR const val)
+            : object(val)
+        {
+        }
+        explicit JSONConstWrapper()
+            : object(std::nullopt)
+        {
+        }
+
+        constexpr inline const Container_PTR get() const noexcept
+        {
+            return object.value();
+        }
+
+        constexpr inline JSON& operator[](int index) const
+        {
+            return object.value()->at(index);
+        }
+
+        constexpr typename Container::const_iterator begin() const noexcept
+        {
+            return object ? object.value()->begin()
+                          : typename Container::const_iterator();
+        }
+        constexpr typename Container::const_iterator end() const noexcept
+        {
+            return object ? object.value()->end()
+                          : typename Container::const_iterator();
+        }
+    };
+
     static JSON Make(Class type)
     {
         JSON ret;
@@ -382,7 +393,7 @@ class JSON
         return ret;
     }
 
-    static JSON Load(const std::string&);
+    static JSON Load(const std::string&) noexcept;
 
     template<typename T>
     void append(T arg)
@@ -433,19 +444,19 @@ class JSON
         return *this;
     }
 
-    JSON& operator[](const std::string& key)
+    JSON& operator[](std::string const& key) noexcept
     {
         SetType(Class::Object);
         return Internal.Map.value()->operator[](key);
     }
 
-    const JSON& operator[](const std::string& key) const
+    const JSON& operator[](std::string const& key) const noexcept
     {
         SetType(Class::Object);
         return Internal.Map.value()->operator[](key);
     }
 
-    JSON& operator[](unsigned index)
+    JSON& operator[](unsigned index) noexcept
     {
         SetType(Class::Array);
         if (index >= Internal.List.value()->size())
@@ -454,7 +465,7 @@ class JSON
         return Internal.List.value()->operator[](index);
     }
 
-    JSON& at(const std::string& key)
+    constexpr inline JSON& at(const std::string& key)
     {
         return Internal.Map.value()->operator[](key);
     }
@@ -465,14 +476,14 @@ class JSON
         return Internal.Map.value()->operator[](key);
     }
 
-    JSON& at(unsigned index) { return operator[](index); }
+    constexpr inline JSON& at(unsigned index) { return operator[](index); }
 
-    const JSON& at(unsigned index) const
+    constexpr inline const JSON& at(unsigned index) const
     {
         return Internal.List.value()->operator[](index);
     }
 
-    size_t length() const
+    constexpr inline size_t length() const
     {
         if (Type == Class::Array)
             return Internal.List.value()->size();
@@ -480,7 +491,7 @@ class JSON
             return 0;
     }
 
-    constexpr bool hasKey(const std::string& key) const
+    constexpr inline bool hasKey(const std::string& key) const
     {
         if (Type == Class::Object) {
             return Internal.Map.value()->contains(key);
@@ -500,7 +511,7 @@ class JSON
         return keys;
     }
 
-    size_t size() const
+    constexpr inline size_t size() const noexcept
     {
         if (Type == Class::Object)
             return Internal.Map.value()->size();
@@ -510,82 +521,80 @@ class JSON
             return -1UL;
     }
 
-    Class JSONType() const { return Type; }
+    constexpr inline Class JSONType() const noexcept { return Type; }
 
-    /// Functions for getting primitives from the JSON object.
-    bool IsNull() const { return Type == Class::Null; }
+    constexpr inline bool IsNull() const { return Type == Class::Null; }
 
-    std::string ToString() const
+    inline std::string ToString() const noexcept
     {
         bool b;
         return ToString(b);
     }
-    std::string ToString(bool& ok) const
+    inline std::string ToString(bool& ok) const noexcept
     {
         ok = (Type == Class::String);
         return ok ? json_escape(*(Internal.String.value())) : std::string("");
     }
 
-    double ToFloat() const
+    inline double ToFloat() const noexcept
     {
         bool b;
         return ToFloat(b);
     }
-    double ToFloat(bool& ok) const
+    inline double ToFloat(bool& ok) const noexcept
     {
         ok = (Type == Class::Floating);
         return ok ? std::get<double>(Internal.data_) : 0.0;
     }
 
-    long ToInt() const
+    inline long ToInt() const noexcept
     {
         bool b;
         return ToInt(b);
     }
 
-    long ToInt(bool& ok) const
+    inline long ToInt(bool& ok) const noexcept
     {
         ok = (Type == Class::Integral);
         return ok ? std::get<long>(Internal.data_) : 0;
     }
 
-    bool ToBool() const
+    inline bool ToBool() const noexcept
     {
         bool b;
         return ToBool(b);
     }
-    bool ToBool(bool& ok) const
+    inline bool ToBool(bool& ok) const noexcept
     {
         ok = (Type == Class::Boolean);
         return ok ? std::get<bool>(Internal.data_) : false;
     }
 
-    JSONWrapper<JSON_Map> ObjectRange()
+    inline JSONWrapper<JSON_Map> ObjectRange() noexcept
     {
         return JSONWrapper<JSON_Map>(Internal.Map.value());
     }
 
-    JSONWrapper<JSON_Deque> ArrayRange()
+    inline JSONWrapper<JSON_Deque> ArrayRange() noexcept
     {
         return JSONWrapper<JSON_Deque>(Internal.List.value());
     }
 
-    JSONConstWrapper<JSON_Map> ObjectRange() const
+    inline JSONConstWrapper<JSON_Map> ObjectRange() const noexcept
     {
         return JSONConstWrapper<JSON_Map>(Internal.Map.value());
     }
 
-    JSONConstWrapper<JSON_Deque> ArrayRange() const
+    inline JSONConstWrapper<JSON_Deque> ArrayRange() const noexcept
     {
         return JSONConstWrapper<JSON_Deque>(Internal.List.value());
     }
 
-    std::string dump(int depth = 1, std::string tab = "  ") const
+    std::string dump(int depth = 1, std::string tab = "  ") const noexcept
     {
         std::string pad = "";
         for (int i = 0; i < depth; ++i, pad += tab)
             ;
-        // Null, Object, Array, String, Floating, Integral, Boolean
         switch (Type) {
             case Class::Null:
                 return "null";
@@ -629,7 +638,7 @@ class JSON
     friend std::ostream& operator<<(std::ostream&, const JSON&);
 
   private:
-    void SetType(Class type) const
+    void SetType(Class type) const noexcept
     {
         if (type == Type)
             return;
@@ -665,34 +674,37 @@ class JSON
     mutable Class Type = Class::Null;
 };
 
-inline JSON Array()
+inline JSON Array() noexcept
 {
     return JSON::Make(JSON::Class::Array);
 }
 
 template<typename... T>
-inline JSON Array(T... args)
+inline JSON Array(T... args) noexcept
 {
     JSON arr = JSON::Make(JSON::Class::Array);
     arr.append(args...);
     return arr;
 }
 
-inline JSON Object()
+inline JSON Object() noexcept
 {
     return JSON::Make(JSON::Class::Object);
 }
 
 namespace {
-JSON parse_next(const std::string&, size_t&);
 
-void consume_ws(const std::string& str, size_t& offset)
+// json construction functions
+
+JSON parse_next(std::string const&, size_t&) noexcept;
+
+void consume_ws(std::string const& str, size_t& offset) noexcept
 {
     while (isspace(str[offset]))
         ++offset;
 }
 
-JSON parse_object(const std::string& str, size_t& offset)
+JSON parse_object(std::string const& str, size_t& offset) noexcept
 {
     JSON object = JSON::Make(JSON::Class::Object);
 
@@ -732,7 +744,7 @@ JSON parse_object(const std::string& str, size_t& offset)
     return object;
 }
 
-JSON parse_array(const std::string& str, size_t& offset)
+JSON parse_array(std::string const& str, size_t& offset) noexcept
 {
     JSON array = JSON::Make(JSON::Class::Array);
     unsigned index = 0;
@@ -764,7 +776,7 @@ JSON parse_array(const std::string& str, size_t& offset)
     return array;
 }
 
-JSON parse_string(const std::string& str, size_t& offset)
+JSON parse_string(std::string const& str, size_t& offset) noexcept
 {
     JSON String;
     std::string val;
@@ -823,7 +835,7 @@ JSON parse_string(const std::string& str, size_t& offset)
     return String;
 }
 
-JSON parse_number(const std::string& str, size_t& offset)
+JSON parse_number(std::string const& str, size_t& offset) noexcept
 {
     JSON Number;
     std::string val, exp_str;
@@ -876,7 +888,7 @@ JSON parse_number(const std::string& str, size_t& offset)
     return Number;
 }
 
-JSON parse_bool(const std::string& str, size_t& offset)
+JSON parse_bool(std::string const& str, size_t& offset) noexcept
 {
     JSON Bool;
     if (str.substr(offset, 4) == "true")
@@ -892,7 +904,7 @@ JSON parse_bool(const std::string& str, size_t& offset)
     return Bool;
 }
 
-JSON parse_null(const std::string& str, size_t& offset)
+JSON parse_null(std::string const& str, size_t& offset)
 {
     JSON Null;
     if (str.substr(offset, 4) != "null") {
@@ -904,7 +916,7 @@ JSON parse_null(const std::string& str, size_t& offset)
     return Null;
 }
 
-JSON parse_next(const std::string& str, size_t& offset)
+JSON parse_next(std::string const& str, size_t& offset) noexcept
 {
     char value;
     consume_ws(str, offset);
@@ -928,12 +940,17 @@ JSON parse_next(const std::string& str, size_t& offset)
     std::cerr << "ERROR: Parse: Unknown starting character '" << value << "'\n";
     return JSON();
 }
-}
 
-inline JSON JSON::Load(const std::string& str)
+} // namespace
+
+/////////////////////
+// Main API function
+////////////////////
+
+inline JSON JSON::Load(std::string const& str) noexcept
 {
     size_t offset = 0;
     return parse_next(str, offset);
 }
 
-} // End Namespace json
+} // namespace json
