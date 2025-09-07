@@ -10,7 +10,7 @@ project(
   LANGUAGES CXX
 )
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake") # Make our cmake scripts available
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 include(GNUInstallDirs)
 include(CMakeDependentOption)
@@ -47,20 +47,22 @@ if(BUILD_EXAMPLES)
 
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cpp")
+  # build the test executable too
+  list(APPEND sources "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
 
-    foreach(example_source ${sources})
-        get_filename_component(example_name ${example_source} NAME_WE)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -DDEBUG")
-        add_executable(${example_name} ${example_source} ${headers})
-        set_target_properties(${example_name} PROPERTIES CXX_STANDARD 20)
+  foreach(example_source ${sources})
+      get_filename_component(example_name ${example_source} NAME_WE)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -DDEBUG")
+      add_executable(${example_name} ${example_source} ${headers})
+      set_target_properties(${example_name} PROPERTIES CXX_STANDARD 20)
 
-        target_set_warnings(${example_name} ENABLE ALL AS_ERROR ALL DISABLE Annoying)
+      target_set_warnings(${example_name} ENABLE ALL AS_ERROR ALL DISABLE Annoying)
 
-        target_include_directories(
-          ${example_name} PUBLIC $<BUILD_INTERFACE:${${example_name}_SOURCE_DIR}>
-                                $<INSTALL_INTERFACE:${example_name}-${PROJECT_VERSION}>
-        )
+      target_include_directories(
+        ${example_name} PUBLIC $<BUILD_INTERFACE:${${example_name}_SOURCE_DIR}>
+                              $<INSTALL_INTERFACE:${example_name}-${PROJECT_VERSION}>
+      )
 
-        target_link_libraries(${example_name} PUBLIC simplejson)
-    endforeach()
+      target_link_libraries(${example_name} PUBLIC simplejson)
+  endforeach()
 endif()

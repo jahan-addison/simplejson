@@ -3,7 +3,6 @@
 #include <simplejson.h>
 
 using json::JSON;
-using namespace std;
 
 void dumpArrayConst(const JSON& array)
 {

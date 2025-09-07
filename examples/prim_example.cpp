@@ -4,21 +4,20 @@
 #include <simplejson.h>
 
 using json::JSON;
-using namespace std;
 
 int main()
 {
     JSON obj;
 
     obj = true;
-    cout << "Value: " << boolalpha << obj.ToBool() << endl;
+    std::cout << "Value: " << std::boolalpha << obj.ToBool() << std::endl;
 
     obj = "Test String";
-    cout << "Value: " << obj.ToString() << endl;
+    std::cout << "Value: " << obj.ToString() << std::endl;
 
     obj = 2.2;
-    cout << "Value: " << obj.ToFloat() << endl;
+    std::cout << "Value: " << obj.ToFloat() << std::endl;
 
     obj = 3;
-    cout << "Value: " << obj.ToInt() << endl;
+    std::cout << "Value: " << obj.ToInt() << std::endl;
 }

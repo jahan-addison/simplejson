@@ -2,7 +2,6 @@
 #include <iostream>
 #include <simplejson.h>
 
-using namespace std;
 using json::JSON;
 
 int main()
@@ -17,10 +16,10 @@ int main()
                           "   \"Key3\" : 1234, "
                           "   \"Key4\" : null }");
 
-    cout << Int << endl;
-    cout << Float << endl;
-    cout << Str << endl;
-    cout << EscStr << endl;
-    cout << Arr << endl;
-    cout << Obj << endl;
+    std::cout << Int << std::endl;
+    std::cout << Float << std::endl;
+    std::cout << Str << std::endl;
+    std::cout << EscStr << std::endl;
+    std::cout << Arr << std::endl;
+    std::cout << Obj << std::endl;
 }

@@ -2,17 +2,17 @@
 
 simplejson is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson is a single C++ Header file, "simplejson.h". The library requires at least C++20.
 
-> Based on version by `nbsdx`
+This library is based on the version by `nbsdx`, and primary created for my [B Compiler, Credence](https://github.com/jahan-addison/credence/).
 
 ### Major changes
 
-* Removes most memory leaks
-* Compiles with Address, Undefined sanitizers; and `-Wall -Wextra -Werror -Wpedantic`
+* [Removes memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17529039358/job/49783434847#step:5:661)
+* Compiles with Address, Undefined sanitizers; valgrind; and `-Wall -Wextra -Werror -Wpedantic`
 * Uses `constexpr` and `const` where possible
-* cmake and cmake library installation via `FetchContent`
-* Removes all `new` and `delete`
+* cmake and enable cmake library installation via `FetchContent`
+* Removes all uses of `new` and `delete`
   * Uses `shared_ptr` where necessary, with no dangling pointers
-  * Replaces `union` and `nullptr` with `std::optional` and `std::variant`
+  * Replaces `nullptr` and `union` with `std::optional` and `std::variant`
 * New `json::JSON::dumpKeys` method to dump the keys of a `Class::Object`
 * Expose `get` method on `ArrayRange` to get underlying iterator
 

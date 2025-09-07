@@ -3,7 +3,6 @@
 #include <simplejson.h>
 
 using json::JSON;
-using namespace std;
 
 int main()
 {
@@ -12,7 +11,7 @@ int main()
     JSON null;
     JSON Bool(true);
     JSON Str("RawString");
-    JSON Str2(string("C++String"));
+    JSON Str2(std::string("C++String"));
     JSON Int(1);
     JSON Float(1.2);
     JSON Arr = json::Array();
@@ -24,7 +23,7 @@ int main()
     Bool = "rtew";
     Bool = 1;
     Bool = 1.1;
-    Bool = string("asd");
+    Bool = std::string("asd");
 
     // Append to Arrays, appending to a non-array
     // will turn the object into an array with the
@@ -54,5 +53,5 @@ int main()
     Obj["Key6"] = Obj2;
 
     // Dump Obj to a string.
-    cout << Obj << endl;
+    std::cout << Obj << std::endl;
 }

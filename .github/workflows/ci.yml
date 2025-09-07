@@ -46,6 +46,8 @@ jobs:
         cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DBUILD_EXAMPLES=ON
         cd build
         make
+        valgrind --leak-check=full --show-leak-kinds=all ./test
+        valgrind --leak-check=full --show-leak-kinds=all ./large_example
         valgrind --leak-check=full --show-leak-kinds=all ./array_example
         valgrind --leak-check=full --show-leak-kinds=all ./iter_example
         valgrind --leak-check=full --show-leak-kinds=all ./json_example
