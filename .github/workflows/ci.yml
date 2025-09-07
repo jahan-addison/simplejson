@@ -10,20 +10,30 @@ on:
       - master
       - main
 
-env:
-  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [g++, clang++]
+        exclude: # Exclude macOS + GCC as it's not the default and requires extra setup
+          - os: macos-latest
+            compiler: g++
 
     steps:
-    - uses: actions/checkout@v3
 
-    - name: Installation
+    - name: Install dependencies (Ubuntu)
+      if: startsWith(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update
-        sudo apt-get install -y llvm-20 clang-20 cppcheck clang-tidy valgrind
+        sudo apt-get install -y gcc-10 llvm-20 valgrind clang-20 iwyu python3-dev cppcheck clang-tidy
+        sudo update-alternatives \
+          --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 \
+          --slave /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-10 \
+          --slave /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-10 \
+          --slave /usr/bin/gcov gcov /usr/bin/gcov-10
         sudo update-alternatives \
           --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-20 100 \
           --slave /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-20 \
@@ -31,25 +41,38 @@ jobs:
         sudo update-alternatives \
           --install /usr/bin/clang clang /usr/bin/clang-20 100
 
-    - name: configure
-      run:
+    - name: Install dependencies (Mac)
+      if: startsWith(matrix.os, 'macos')
+      run: |
+        brew update
+        brew install llvm@20 clang-format cppcheck coreutils
 
-    - name: build and test
+    - uses: actions/checkout@v4
+
+    - name: build
       run: |
         # Make with -fsanitize
-        cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DBUILD_EXAMPLES=ON
-        cd build/
-        make
-        cd ..
+        cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DBUILD_EXAMPLES=ON
+
+    - name: test
+      run: |
+        # Make with -fsanitize
+        cmake --build build
+        ./build/test $(pwd)/test/cases
+        ./build/large_example
+
+
+    - name: memcheck
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        # Build for valgrind without -fsanitize
         rm -rf build
-        # Make for valgrind
-        cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DBUILD_EXAMPLES=ON
-        cd build
-        make
-        valgrind --leak-check=full --show-leak-kinds=all ./test
-        valgrind --leak-check=full --show-leak-kinds=all ./large_example
-        valgrind --leak-check=full --show-leak-kinds=all ./array_example
-        valgrind --leak-check=full --show-leak-kinds=all ./iter_example
-        valgrind --leak-check=full --show-leak-kinds=all ./json_example
-        valgrind --leak-check=full --show-leak-kinds=all ./load_example
-        valgrind --leak-check=full --show-leak-kinds=all ./prim_example
+        cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DBUILD_EXAMPLES=ON
+        cmake --build build
+        valgrind --leak-check=full --show-leak-kinds=all ./build/test $(pwd)/test/cases
+        valgrind --leak-check=full --show-leak-kinds=all ./build/large_example
+        valgrind --leak-check=full --show-leak-kinds=all ./build/array_example
+        valgrind --leak-check=full --show-leak-kinds=all ./build/iter_example
+        valgrind --leak-check=full --show-leak-kinds=all ./build/json_example
+        valgrind --leak-check=full --show-leak-kinds=all ./build/load_example
+        valgrind --leak-check=full --show-leak-kinds=all ./build/prim_example

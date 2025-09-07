@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.1.0
+  VERSION 1.1.2
   LANGUAGES CXX
 )
 
@@ -25,8 +25,8 @@ CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 
 # Enable sanitizer with `-DUSE_SANITIZER=<VALUE>` argument to CMake
-# enables sanitizers support using the the `USE_SANITIZER` flag available values are: Address,
-# Memory, MemoryWithOrigins, Undefined, Thread, Leak, 'Address;Undefined'
+# flag available values are: Address, Memory, MemoryWithOrigins, Undefined,
+# Thread, Leak, 'Address;Undefined'
 if(USE_SANITIZER)
     include(${cmake-scripts_SOURCE_DIR}/sanitizers.cmake)
 endif()
@@ -36,7 +36,6 @@ include(${cmake-scripts_SOURCE_DIR}/tools.cmake)
 # Define the header-only library
 add_library(${PROJECT_NAME} INTERFACE)
 
-# Specify the public header(s) for the interface library
 target_include_directories(${PROJECT_NAME}
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -46,8 +45,8 @@ target_include_directories(${PROJECT_NAME}
 if(BUILD_EXAMPLES)
 
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
-  file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cpp")
-  # build the test executable too
+  file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cc")
+  # build the test executable, too
   list(APPEND sources "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
 
   foreach(example_source ${sources})

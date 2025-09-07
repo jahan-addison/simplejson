@@ -9,12 +9,14 @@ namespace fs = std::filesystem;
 
 using json::JSON;
 
-int main()
+int main(int argc, char* argv[])
 {
     fs::path current_directory = std::filesystem::current_path();
     try {
-        for (const auto& entry :
-             fs::directory_iterator(current_directory /= "../test/cases")) {
+        const auto cases_path =
+            argc == 2 ? fs::path(argv[1])
+                      : fs::path(current_directory /= "../test/cases");
+        for (const auto& entry : fs::directory_iterator(cases_path)) {
             if (entry.is_regular_file()) {
                 std::cout << "Found file: " << entry.path().filename()
                           << std::endl;
