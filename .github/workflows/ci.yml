@@ -23,7 +23,7 @@ jobs:
     - name: Installation
       run: |
         sudo apt-get update
-        sudo apt-get install -y llvm-20 clang-20 cppcheck clang-tidy
+        sudo apt-get install -y llvm-20 clang-20 cppcheck clang-tidy valgrind
         sudo update-alternatives \
           --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-20 100 \
           --slave /usr/bin/llvm-ranlib llvm-ranlib /usr/bin/llvm-ranlib-20 \
@@ -32,9 +32,22 @@ jobs:
           --install /usr/bin/clang clang /usr/bin/clang-20 100
 
     - name: configure
-      run: cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DBUILD_EXAMPLES=ON
+      run:
 
-    - name: build
+    - name: build and test
       run: |
+        # Make with -fsanitize
+        cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DBUILD_EXAMPLES=ON
         cd build/
         make
+        cd ..
+        rm -rf build
+        # Make for valgrind
+        cmake -Bbuild -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++) -DCMAKE_BUILD_TYPE=Debug -DBUILD_EXAMPLES=ON
+        cd build
+        make
+        valgrind --leak-check=full --show-leak-kinds=all ./array_example
+        valgrind --leak-check=full --show-leak-kinds=all ./iter_example
+        valgrind --leak-check=full --show-leak-kinds=all ./json_example
+        valgrind --leak-check=full --show-leak-kinds=all ./load_example
+        valgrind --leak-check=full --show-leak-kinds=all ./prim_example

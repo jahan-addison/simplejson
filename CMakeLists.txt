@@ -50,6 +50,7 @@ if(BUILD_EXAMPLES)
 
     foreach(example_source ${sources})
         get_filename_component(example_name ${example_source} NAME_WE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -DDEBUG")
         add_executable(${example_name} ${example_source} ${headers})
         set_target_properties(${example_name} PROPERTIES CXX_STANDARD 20)
 
