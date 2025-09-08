@@ -372,7 +372,7 @@ class JSON
             return object.value();
         }
 
-        constexpr inline JSON& operator[](int index) const
+        inline JSON& operator[](int index) const
         {
             return object.value()->at(index);
         }
@@ -468,7 +468,7 @@ class JSON
         return Internal.List.value()->operator[](index);
     }
 
-    constexpr inline JSON& at(const std::string& key)
+    inline JSON& at(const std::string& key)
     {
         return Internal.Map.value()->operator[](key);
     }
@@ -479,9 +479,9 @@ class JSON
         return Internal.Map.value()->operator[](key);
     }
 
-    constexpr inline JSON& at(unsigned index) { return operator[](index); }
+    inline JSON& at(unsigned index) { return operator[](index); }
 
-    constexpr inline const JSON& at(unsigned index) const
+    inline const JSON& at(unsigned index) const
     {
         return Internal.List.value()->operator[](index);
     }
@@ -491,7 +491,7 @@ class JSON
         if (Type == Class::Array)
             return Internal.List.value()->size();
         else
-            return 0;
+            return 0UL;
     }
 
     constexpr inline bool hasKey(const std::string& key) const
