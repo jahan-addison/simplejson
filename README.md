@@ -2,7 +2,7 @@
 
 simplejson++ is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson++ is a single C++ Header file, "simplejson.h".
 
-simplejson++ requires at least C++20.
+simplejson++ requires at least C++20, and has been tested with clang-18 and gcc-10 on macOS (arm) and Ubuntu.
 
 This library was primarily created for my [B Compiler, Credence](https://github.com/jahan-addison/credence/).
 
@@ -11,7 +11,7 @@ This library was primarily created for my [B Compiler, Credence](https://github.
 ### Major Features
 
 * Very intuitive and easy-to-use for constructing json from scratch, or load from disk
-* [No memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17529039358/job/49783434847#step:5:661)
+* [No memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17536085262/job/49799553955#step:7:664)
 * Compiles with Address, Undefined sanitizers; valgrind; and `-Wall -Wextra -Werror -Wpedantic`
 * Uses `constexpr` and `const` where possible
 * cmake and enables cmake library installation via `FetchContent`
@@ -38,7 +38,7 @@ include(FetchContent)
 FetchContent_Declare(
     simplejson
     GIT_REPOSITORY https://github.com/jahan-addison/simplejson.git
-    GIT_TAG v1.1.2
+    GIT_TAG v1.1.3
 )
 
 FetchContent_MakeAvailable(simplejson)

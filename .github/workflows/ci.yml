@@ -24,7 +24,12 @@ jobs:
 
     steps:
 
-    - name: Install dependencies (Ubuntu)
+    - name: cmake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.16.x'
+
+    - name: install dependencies (Ubuntu)
       if: startsWith(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update
@@ -41,7 +46,7 @@ jobs:
         sudo update-alternatives \
           --install /usr/bin/clang clang /usr/bin/clang-20 100
 
-    - name: Install dependencies (Mac)
+    - name: install dependencies (Mac)
       if: startsWith(matrix.os, 'macos')
       run: |
         brew update
