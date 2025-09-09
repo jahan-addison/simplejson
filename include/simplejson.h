@@ -61,7 +61,6 @@ template<typename T>
 concept Object_Variant =
     std::same_as<T, JSON_Deque> || std::same_as<T, JSON_String> ||
     std::same_as<T, JSON_Map>;
-
 template<typename T>
 concept Object_Variant_Pointer =
     std::same_as<T, JSON_Deque_PTR> || std::same_as<T, JSON_String_PTR> ||
@@ -123,14 +122,12 @@ class JSON
     };
 
   public:
+    ~JSON() = default;
     JSON()
         : Internal()
         , Type(Class::Null)
     {
     }
-
-    ~JSON() = default;
-
     explicit JSON(initializer_list<JSON> list)
         : JSON()
     {
@@ -139,24 +136,21 @@ class JSON
             this->operator[](i.ToString()) = i;
         }
     }
-
     explicit JSON(JSON&& other)
         : Internal(std::move(other.Internal))
         , Type(std::move(other.Type))
     {
     }
-
     JSON const& operator=(JSON&& other)
     {
         Internal = std::move(other.Internal);
         Type = std::move(other.Type);
         return *this;
     }
-
     JSON(const JSON& other)
         : Internal(other.Internal)
+        , Type(other.Type)
     {
-        Type = other.Type;
     }
 
     JSON& operator=(const JSON& other)
@@ -232,7 +226,6 @@ class JSON
             : String(make_data_object<JSON_String>(i))
         {
         }
-
         template<Object_Variant_Pointer Type>
         explicit internal(Type&& i)
         {
@@ -244,17 +237,14 @@ class JSON
                 List = std::move(i);
             }
         }
-
-        std::optional<JSON_Deque_PTR> List{ std::nullopt };
-        std::optional<JSON_String_PTR> String{ std::nullopt };
-        std::optional<JSON_Map_PTR> Map{ std::nullopt };
-
+        std::optional<JSON_Deque_PTR> List;
+        std::optional<JSON_String_PTR> String;
+        std::optional<JSON_Map_PTR> Map;
         data data_ = std::monostate();
     };
 
   public:
     mutable internal Internal{};
-
     inline friend std::ostream& operator<<(std::ostream& os, const JSON& json)
     {
         os << json.dump();
@@ -274,7 +264,6 @@ class JSON
             return std::make_shared<Type>(std::map<std::string, JSON>{});
         }
     }
-
     inline auto make_empty_map() const noexcept
     {
         return std::map<std::string, JSON>{};
@@ -371,25 +360,24 @@ class JSON
         {
             return object.value();
         }
-
-        inline JSON& operator[](int index) const
+        constexpr inline JSON& operator[](int index) const
         {
             return object.value()->at(index);
         }
-
-        constexpr typename Container::const_iterator begin() const noexcept
+        constexpr inline typename Container::const_iterator begin()
+            const noexcept
         {
             return object ? object.value()->begin()
                           : typename Container::const_iterator();
         }
-        constexpr typename Container::const_iterator end() const noexcept
+        constexpr inline typename Container::const_iterator end() const noexcept
         {
             return object ? object.value()->end()
                           : typename Container::const_iterator();
         }
     };
 
-    static JSON Make(Class type)
+    static inline JSON Make(Class type)
     {
         JSON ret;
         ret.SetType(type);
@@ -399,14 +387,14 @@ class JSON
     static JSON Load(const std::string&) noexcept;
 
     template<typename T>
-    void append(T arg)
+    inline void append(T arg)
     {
         SetType(Class::Array);
         Internal.List.value()->emplace_back(arg);
     }
 
     template<typename T, typename... U>
-    void append(T arg, U... args)
+    inline void append(T arg, U... args)
     {
         append(arg);
         append(args...);
@@ -447,19 +435,19 @@ class JSON
         return *this;
     }
 
-    JSON& operator[](std::string const& key) noexcept
+    inline JSON& operator[](std::string const& key) noexcept
     {
         SetType(Class::Object);
         return Internal.Map.value()->operator[](key);
     }
 
-    const JSON& operator[](std::string const& key) const noexcept
+    inline const JSON& operator[](std::string const& key) const noexcept
     {
         SetType(Class::Object);
         return Internal.Map.value()->operator[](key);
     }
 
-    JSON& operator[](unsigned index) noexcept
+    inline JSON& operator[](unsigned index) noexcept
     {
         SetType(Class::Array);
         if (index >= Internal.List.value()->size())
@@ -473,7 +461,7 @@ class JSON
         return Internal.Map.value()->operator[](key);
     }
 
-    const JSON& at(const std::string& key) const
+    inline const JSON& at(const std::string& key) const
     {
         SetType(Class::Object);
         return Internal.Map.value()->operator[](key);
@@ -505,7 +493,7 @@ class JSON
 
     std::vector<std::string> dumpKeys() const
     {
-        auto data = *(Internal.Map.value());
+        auto data = *Internal.Map.value();
         std::vector<std::string> keys{};
         std::transform(data.begin(),
                        data.end(),
@@ -641,7 +629,7 @@ class JSON
     friend std::ostream& operator<<(std::ostream&, const JSON&);
 
   private:
-    void SetType(Class type) const noexcept
+    inline void SetType(Class type) const noexcept
     {
         if (type == Type)
             return;
@@ -701,7 +689,7 @@ namespace {
 
 JSON parse_next(std::string const&, size_t&) noexcept;
 
-void consume_ws(std::string const& str, size_t& offset) noexcept
+inline void consume_ws(std::string const& str, size_t& offset) noexcept
 {
     while (isspace(str[offset]))
         ++offset;
@@ -890,7 +878,6 @@ JSON parse_number(std::string const& str, size_t& offset) noexcept
     }
     return Number;
 }
-
 JSON parse_bool(std::string const& str, size_t& offset) noexcept
 {
     JSON Bool;
@@ -906,7 +893,6 @@ JSON parse_bool(std::string const& str, size_t& offset) noexcept
     offset += (Bool.ToBool() ? 4 : 5);
     return Bool;
 }
-
 JSON parse_null(std::string const& str, size_t& offset)
 {
     JSON Null;
@@ -918,7 +904,6 @@ JSON parse_null(std::string const& str, size_t& offset)
     offset += 4;
     return Null;
 }
-
 JSON parse_next(std::string const& str, size_t& offset) noexcept
 {
     char value;

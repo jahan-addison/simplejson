@@ -4,17 +4,18 @@ simplejson++ is a lightweight JSON library for exporting data in JSON format fro
 
 simplejson++ requires at least C++20, and has been tested with clang-18 and gcc-10 on macOS (arm) and Ubuntu.
 
-This library was primarily created for my [B Compiler, Credence](https://github.com/jahan-addison/credence/).
+This library was primarily created for [Credence](https://github.com/jahan-addison/credence/).
 
 ---
 
 ### Major Features
 
-* Very intuitive and easy-to-use for constructing json from scratch, or load from disk
+* Intuitive and user-friendly construction of JSON objects, or loading from disk
 * [No memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17536085262/job/49799553955#step:7:664)
-* Compiles with Address, Undefined sanitizers; valgrind; and `-Wall -Wextra -Werror -Wpedantic`
+* Total header size is _25kb_
+* Compiles with Address, Undefined fsanitizers; valgrind; and `-Wall -Wextra -Werror -Wpedantic`
 * Uses `constexpr` and `const` where possible
-* cmake and enables cmake library installation via `FetchContent`
+* Easy library installation via `FetchContent` or copying the header
 * No use of `new` and `delete`
   * Uses `shared_ptr` where necessary, with no dangling pointers
 * Exposes `get` method on `ArrayRange` to get underlying iterator of an `JSON::Array`
@@ -24,9 +25,7 @@ This library was primarily created for my [B Compiler, Credence](https://github.
 * `json::JSON::Load` static method to load large JSON from files or strings
 * `json::JSON::dump` method to pretty-print json
 
-* `json::JSON::dumpKeys` method to dump the keys of a `Class::Object`
-
-See more examples below and in `examples/` directory.
+See examples below and in `examples/` directory.
 
 ## Installation
 
@@ -38,7 +37,7 @@ include(FetchContent)
 FetchContent_Declare(
     simplejson
     GIT_REPOSITORY https://github.com/jahan-addison/simplejson.git
-    GIT_TAG v1.1.3
+    GIT_TAG v1.1.4
 )
 
 FetchContent_MakeAvailable(simplejson)
@@ -68,7 +67,7 @@ int main() {
   obj["new"]["some"]["deep"]["key"] = "Value";
   obj["array2"].append( false, "three" );
 
-  // We can also parse a string into a JSON object:
+  // We can also parse astd::string into a JSON object:
   obj["parsed"] = JSON::Load( "[ { \"Key\" : \"Value\" }, false ]" );
 
   std::cout << obj << std::endl;
@@ -125,7 +124,7 @@ namespace json {
             Static Methods
          */
 
-        /// Create a JSON object from a string.
+        /// Create a JSON object from astd::string.
         JSON Load( string_type );
 
         /// Create a JSON object with the specified json::Class type.
@@ -146,7 +145,7 @@ namespace json {
         /// Assign a numeric type to a JSON object
         JSON& operator=( numeric_type );
 
-        /// Assign a string type to a JSON object
+        /// Assign astd::string type to a JSON object
         JSON& operator=( string_type );
 
         /// Assign a null type to a JSON object
@@ -190,8 +189,12 @@ namespace json {
         /// primitive types using variadic templates
         void append( any_type [, ... ] );
 
-        /// Dumps the JSON object to a string format for storing.
-        void dump( int depth = 0, string indent = "  " );
+        /// Dumps the JSON object to astd::string format for storing.
+        std::string dump( int depth = 0, std::string indent = "  " );
+
+        /// Dumps the keys of a JSON object to std::cout
+        void dumpKeys();
+
 
         /// Get the JSON::Class type for a JSON object.
         JSON::Class JSONType();
@@ -199,9 +202,9 @@ namespace json {
         /// Convience method to determine if an object is Class::Null
         bool IsNull();
 
-        /// Convert to a string literal iff Type == Class::String
-        string ToString();
-        string ToString( bool &OK );
+        /// Convert to astd::string literal iff Type == Class::String
+        std::string ToString();
+        std::string ToString( bool &OK );
 
         /// Convert to a floating literal iff Type == Class::Floating
         double ToFloat();
