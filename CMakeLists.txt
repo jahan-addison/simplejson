@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.1.4
+  VERSION 1.1.8
   LANGUAGES CXX
 )
 
@@ -18,20 +18,32 @@ include(cmake/CPM.cmake)
 include(Warnings)
 
 cmake_dependent_option(BUILD_EXAMPLES
-    "Enable ${PROJECT_NAME} project tests targets" OFF
+    "Enable ${PROJECT_NAME} project example targets" OFF
     "BUILD_EXAMPLES" OFF
 )
+
+cmake_dependent_option(BUILD_TESTS
+    "Enable ${PROJECT_NAME} project tests targets" OFF
+    "BUILD_TESTS" OFF
+)
+
 CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 
-# Enable sanitizer with `-DUSE_SANITIZER=<VALUE>` argument to CMake
-# flag available values are: Address, Memory, MemoryWithOrigins, Undefined,
-# Thread, Leak, 'Address;Undefined'
+CPMAddPackage(
+  NAME catch2
+  VERSION 3.10.0
+  GITHUB_REPOSITORY catchorg/Catch2
+)
+
+list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/contrib")
+
 if(USE_SANITIZER)
     include(${cmake-scripts_SOURCE_DIR}/sanitizers.cmake)
 endif()
 
 include(${cmake-scripts_SOURCE_DIR}/tools.cmake)
+
 
 # Define the header-only library
 add_library(${PROJECT_NAME} INTERFACE)
@@ -42,19 +54,31 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:include>
 )
 
+if(BUILD_TESTS)
+  file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
+  file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc")
+  add_executable(Test_Suite "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
+  set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 17)
+
+  target_link_libraries(Test_Suite PUBLIC simplejson Catch2WithMain)
+
+  # C++20
+  add_executable(Test_Suite_CPP20 "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
+  set_target_properties(Test_Suite_CPP20 PROPERTIES CXX_STANDARD 20)
+  target_link_libraries(Test_Suite_CPP20 PUBLIC simplejson Catch2WithMain)
+
+endif()
+
 if(BUILD_EXAMPLES)
 
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cc")
-  # build the test executable, too
-  list(APPEND sources "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
 
   foreach(example_source ${sources})
       get_filename_component(example_name ${example_source} NAME_WE)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -DDEBUG")
-      add_executable(${example_name} ${example_source} ${headers})
-      set_target_properties(${example_name} PROPERTIES CXX_STANDARD 20)
-
+      add_executable(${example_name} ${headers} ${example_source})
+      set_target_properties(${example_name} PROPERTIES CXX_STANDARD 17)
       target_set_warnings(${example_name} ENABLE ALL AS_ERROR ALL DISABLE Annoying)
 
       target_include_directories(
