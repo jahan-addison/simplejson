@@ -6,32 +6,32 @@ using json::JSON;
 
 void dumpArrayConst(const JSON& array)
 {
-    for (auto& j : array.ArrayRange())
+    for (auto& j : array.array_range())
         std::cout << "Value: " << j << "\n";
 }
 
 void dumpArray(JSON& array)
 {
-    for (auto& j : array.ArrayRange())
+    for (auto& j : array.array_range())
         std::cout << "Value: " << j << "\n";
 }
 
 void dumpObjectConst(const JSON& object)
 {
-    for (auto& j : object.ObjectRange())
+    for (auto& j : object.object_range())
         std::cout << "Object[ " << j.first << " ] = " << j.second << "\n";
 }
 
 void dumpObject(JSON& object)
 {
-    for (auto& j : object.ObjectRange())
+    for (auto& j : object.object_range())
         std::cout << "Object[ " << j.first << " ] = " << j.second << "\n";
 }
 
 int main()
 {
-    JSON array = JSON::Make(JSON::Class::Array);
-    JSON obj = JSON::Make(JSON::Class::Object);
+    JSON array = JSON::make(JSON::Class::Array);
+    JSON obj = JSON::make(JSON::Class::Object);
 
     array[0] = "Test0";
     array[1] = "Test1";

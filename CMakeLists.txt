@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.1.4
+  VERSION 1.1.5
   LANGUAGES CXX
 )
 
@@ -24,9 +24,6 @@ cmake_dependent_option(BUILD_EXAMPLES
 CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 
-# Enable sanitizer with `-DUSE_SANITIZER=<VALUE>` argument to CMake
-# flag available values are: Address, Memory, MemoryWithOrigins, Undefined,
-# Thread, Leak, 'Address;Undefined'
 if(USE_SANITIZER)
     include(${cmake-scripts_SOURCE_DIR}/sanitizers.cmake)
 endif()
@@ -46,13 +43,13 @@ if(BUILD_EXAMPLES)
 
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cc")
-  # build the test executable, too
+  # Build the test executable, too
   list(APPEND sources "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
 
   foreach(example_source ${sources})
       get_filename_component(example_name ${example_source} NAME_WE)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -DDEBUG")
-      add_executable(${example_name} ${example_source} ${headers})
+      add_executable(${example_name} ${headers} ${example_source})
       set_target_properties(${example_name} PROPERTIES CXX_STANDARD 20)
 
       target_set_warnings(${example_name} ENABLE ALL AS_ERROR ALL DISABLE Annoying)

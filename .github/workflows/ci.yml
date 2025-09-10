@@ -56,12 +56,12 @@ jobs:
 
     - name: build
       run: |
-        # Make with -fsanitize
+        # make with -fsanitize
         cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DBUILD_EXAMPLES=ON
 
     - name: test
       run: |
-        # Make with -fsanitize
+        # make with -fsanitize
         cmake --build build
         ./build/test $(pwd)/test/cases
         ./build/large_example
@@ -76,6 +76,7 @@ jobs:
         cmake --build build
         valgrind --leak-check=full --show-leak-kinds=all ./build/test $(pwd)/test/cases
         valgrind --leak-check=full --show-leak-kinds=all ./build/large_example
+        valgrind --leak-check=full --show-leak-kinds=all ./build/readme
         valgrind --leak-check=full --show-leak-kinds=all ./build/array_example
         valgrind --leak-check=full --show-leak-kinds=all ./build/iter_example
         valgrind --leak-check=full --show-leak-kinds=all ./build/json_example
