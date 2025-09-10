@@ -1,0 +1,50 @@
+{
+  "product": {
+    "product_id": "P001",
+    "name": "Wireless Noise-Cancelling Headphones",
+    "category": "Electronics",
+    "price": 249.99,
+    "availability": {
+      "in_stock": true,
+      "quantity": 150,
+      "last_restock": "2025-08-20T10:30:00Z"
+    },
+    "specifications": {
+      "color": [
+        "Black",
+        "Silver",
+        "Midnight Blue"
+      ],
+      "connectivity": [
+        "Bluetooth 5.2",
+        "Auxiliary"
+      ],
+      "battery_life_hours": 30,
+      "features": [
+        "Active Noise Cancellation",
+        "Transparency Mode",
+        "Voice Assistant Integration"
+      ]
+    },
+    "reviews": [
+      {
+        "review_id": "R001",
+        "user_id": "U101",
+        "rating": 5,
+        "comment": "Excellent sound quality and very comfortable for long use.",
+        "date": "2025-09-01T14:15:00Z"
+      },
+      {
+        "review_id": "R002",
+        "user_id": "U102",
+        "rating": 4,
+        "comment": "Noise cancellation works great, but charging cable is a bit short.",
+        "date": "2025-08-28T09:00:00Z"
+      }
+    ],
+    "related_products": [
+      "P002",
+      "P003"
+    ]
+  }
+}

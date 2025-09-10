@@ -8,24 +8,19 @@ This library was primarily created for [Credence](https://github.com/jahan-addis
 
 ---
 
-### Major Features
+## Major Features
 
-* Intuitive and user-friendly construction of JSON objects, or loading from disk
-* [No memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17536085262/job/49799553955#step:7:664)
+* Intuitive construction of JSON objects and JSON from strings or file path
+* STL-container type conversion and range access helpers for data types
+* [No memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17600602459/job/50001743753#step:8:661)
 * Total header size is _25kb_
 * Compiles with Address, Undefined fsanitizers; valgrind; and `-Wall -Wextra -Werror -Wpedantic`
 * Uses `constexpr` and `const` where possible
 * Easy library installation via `FetchContent` or copying the header
 * No use of `new` and `delete`
   * Uses `shared_ptr` where necessary, with no dangling pointers
-* Exposes `get` method on `ArrayRange` to get underlying iterator of an `JSON::Array`
 
-### Main Methods
-
-* `json::JSON::Load` static method to load large JSON from files or strings
-* `json::JSON::dump` method to pretty-print json
-
-See examples below and in `examples/` directory.
+See the api and example below, more in `examples/` directory.
 
 ## Installation
 
@@ -49,7 +44,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC simplejson)
 
 ```
 
-# Example
+### Example
 
 ```C++
 #include <simplejson.h>
@@ -57,9 +52,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC simplejson)
 int main() {
   json::JSON obj;
   // Create a new Array as a field of an Object.
-  obj["array"] = json::Array( true, "Two", 3, 4.0 );
+  obj["array"] = json::array( true, "Two", 3, 4.0 );
   // Create a new Object as a field of another Object.
-  obj["obj"] = json::Object();
+  obj["obj"] = json::object();
   // Assign to one of the inner object's fields
   obj["obj"]["inner"] = "Inside";
 
@@ -68,24 +63,24 @@ int main() {
   obj["array2"].append( false, "three" );
 
   // We can also parse astd::string into a JSON object:
-  obj["parsed"] = JSON::Load( "[ { \"Key\" : \"Value\" }, false ]" );
+  obj["parsed"] = JSON::load( "[ { \"Key\" : \"Value\" }, false ]" );
 
   std::cout << obj << std::endl;
 }
 ```
 
-# API
+## API
 
-## Overview
+### Overview
 
-```cpp
+```C++
 namespace json {
 
     /// Create a new JSON Array.
-    JSON Array( [any_type [, ... ] ] );
+    JSON array( [any_type [, ... ] ] );
 
     /// Create a new JSON Object.
-    JSON Object();
+    JSON object();
 
     /// JSON Class. This is the core class.
     class JSON {
@@ -101,12 +96,62 @@ namespace json {
         };
 
         /**
+            Static Methods
+         */
+
+        /// Create a JSON object from a std::string.
+        JSON load( string_type );
+
+        /// Create a JSON object from a json file.
+        JSON load_file( string_type );
+
+        /// Create a JSON object with the specified json::Class type.
+        JSON make( JSON::Class );
+
+        /**
+            Access and Iterators
+        */
+
+        /// Returns a std::map of a Class::Object
+        /// Will return empty map for non-object objects
+        std::map<std::string, JSON> to_map();
+
+        /// Wraps the internal object representation to access iterators
+        /// Will return empty range for non-object objects
+        JSON_Wrapper object_range();
+
+        /// Returns a std::deque of a Class::Array
+        /// Will return empty deque for non-array objects
+        std::deque<JSON> to_deque();
+
+        /// Wraps the internal array representation to access iterators.
+        /// Will return empty range for non-array objects
+        JSON_Wrapper array_range();
+
+        /// Convience method to determine if an object is Class::Null
+        bool is_null();
+
+        /// Convert to a std::string literal iff Type == Class::String
+        std::string to_string();
+
+        /// Convert to a floating literal iff Type == Class::Floating
+        double to_float();
+
+        /// Convert to an integral literal iff Type == Class::Integral
+        long to_int();
+
+        /// Convert to a boolean literal iff Type == Class::Boolean
+        bool to_bool();
+
+        /// Get the JSON::Class type for a JSON object
+        JSON::Class JSON_type();
+
+        /**
             Typed Constructors
 
             string_type:  [const] char *, [const] char[], std::string, etc
             bool_type:    bool
             numeric_type: char, int, long, double, float, etc
-            null_type:    nullptr_t
 
          */
         JSON( string_type );
@@ -119,16 +164,6 @@ namespace json {
          */
         JSON( const JSON & );
         JSON( JSON && );
-
-        /**
-            Static Methods
-         */
-
-        /// Create a JSON object from astd::string.
-        JSON Load( string_type );
-
-        /// Create a JSON object with the specified json::Class type.
-        JSON Make( JSON::Class );
 
         /**
             Operator Overloading
@@ -183,7 +218,7 @@ namespace json {
         int size() const;
 
         /// Determine if an Object has a key
-        bool hasKey( string_type ) const;
+        bool has_key( string_type ) const;
 
         /// Useful for appending to an Array, can take any number of
         /// primitive types using variadic templates
@@ -193,41 +228,9 @@ namespace json {
         std::string dump( int depth = 0, std::string indent = "  " );
 
         /// Dumps the keys of a JSON object to std::cout
-        void dumpKeys();
+        std::vector<std::string> dump_keys();
 
 
-        /// Get the JSON::Class type for a JSON object.
-        JSON::Class JSONType();
-
-        /// Convience method to determine if an object is Class::Null
-        bool IsNull();
-
-        /// Convert to astd::string literal iff Type == Class::String
-        std::string ToString();
-        std::string ToString( bool &OK );
-
-        /// Convert to a floating literal iff Type == Class::Floating
-        double ToFloat();
-        double ToFloat( bool &OK );
-
-        /// Convert to an integral literal iff Type == Class::Integral
-        long ToInt();
-        long ToInt( bool &OK );
-
-        /// Convert to a boolean literal iff Type == Class::Boolean
-        bool ToBool();
-        bool ToBool( bool &OK );
-
-        /**
-            Iterating
-        */
-
-        /// Wraps the internal object representation to access iterators.
-        /// Will return empty range for non-object objects.
-        JSONWrapper ObjectRange();
-
-        /// Wraps the internal array representation to access iterators.
-        /// Will return empty range for non-array objects.
-        JSONWrapper ArrayRange();
-    }; // End json::JSON documentation
-} // End json documentation
+    };
+}
+```

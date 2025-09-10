@@ -26,6 +26,8 @@
 #include <concepts>
 #include <cstdint>
 #include <deque>
+#include <filesystem>
+#include <fstream>
 #include <initializer_list>
 #include <iostream>
 #include <map>
@@ -33,6 +35,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -52,11 +55,9 @@ namespace {
 using JSON_Deque = std::deque<JSON>;
 using JSON_String = std::string;
 using JSON_Map = std::map<std::string, JSON>;
-
 using JSON_Deque_PTR = std::shared_ptr<JSON_Deque>;
 using JSON_String_PTR = std::shared_ptr<JSON_String>;
 using JSON_Map_PTR = std::shared_ptr<JSON_Map>;
-
 template<typename T>
 concept Object_Variant =
     std::same_as<T, JSON_Deque> || std::same_as<T, JSON_String> ||
@@ -122,7 +123,6 @@ class JSON
     };
 
   public:
-    ~JSON() = default;
     JSON()
         : Internal()
         , Type(Class::Null)
@@ -131,9 +131,9 @@ class JSON
     explicit JSON(initializer_list<JSON> list)
         : JSON()
     {
-        SetType(Class::Object);
+        set_type(Class::Object);
         for (auto const& i : list) {
-            this->operator[](i.ToString()) = i;
+            this->operator[](i.to_string()) = i;
         }
     }
     explicit JSON(JSON&& other)
@@ -202,10 +202,10 @@ class JSON
     }
 
   private:
+    // internal STL-container
     struct internal
     {
-        using data =
-            std::variant<std::monostate, long, double, bool, std::string>;
+        using data = std::variant<std::monostate, long, double, bool>;
         using object = std::variant<JSON_Deque, JSON_String, JSON_Map>;
 
         internal() = default;
@@ -300,21 +300,20 @@ class JSON
     }
 
     template<Object_Variant Container>
-    class JSONWrapper
+    class JSON_Wrapper
     {
         using Container_PTR = std::shared_ptr<Container>;
         std::optional<Container_PTR> object;
 
       public:
-        explicit JSONWrapper(Container_PTR val)
+        explicit JSON_Wrapper(Container_PTR val)
             : object(val)
         {
         }
-        explicit JSONWrapper() = default;
 
-        constexpr inline Container_PTR get() const noexcept
+        explicit JSON_Wrapper()
+            : object(std::nullopt)
         {
-            return object.value();
         }
 
         constexpr inline typename Container::iterator begin() noexcept
@@ -341,25 +340,21 @@ class JSON
     };
 
     template<Object_Variant Container>
-    class JSONConstWrapper
+    class JSON_Const_Wrapper
     {
         using Container_PTR = std::shared_ptr<Container>;
         std::optional<Container_PTR> object;
 
       public:
-        explicit JSONConstWrapper(Container_PTR const val)
+        explicit JSON_Const_Wrapper(Container_PTR const val)
             : object(val)
         {
         }
-        explicit JSONConstWrapper()
+        explicit JSON_Const_Wrapper()
             : object(std::nullopt)
         {
         }
 
-        constexpr inline const Container_PTR get() const noexcept
-        {
-            return object.value();
-        }
         constexpr inline JSON& operator[](int index) const
         {
             return object.value()->at(index);
@@ -377,19 +372,21 @@ class JSON
         }
     };
 
-    static inline JSON Make(Class type)
+    static inline JSON make(Class type)
     {
         JSON ret;
-        ret.SetType(type);
+        ret.set_type(type);
         return ret;
     }
 
-    static JSON Load(const std::string&) noexcept;
+    static JSON load(std::string_view) noexcept;
+
+    static JSON load_file(std::string_view);
 
     template<typename T>
     inline void append(T arg)
     {
-        SetType(Class::Array);
+        set_type(Class::Array);
         Internal.List.value()->emplace_back(arg);
     }
 
@@ -403,7 +400,7 @@ class JSON
     template<typename T>
     typename enable_if<std::is_same<T, bool>::value, JSON&>::type operator=(T b)
     {
-        SetType(Class::Boolean);
+        set_type(Class::Boolean);
         Internal.data_ = b;
         return *this;
     }
@@ -413,7 +410,7 @@ class JSON
                        JSON&>::type
     operator=(T i)
     {
-        SetType(Class::Integral);
+        set_type(Class::Integral);
         std::get<long>(Internal.data_) = i;
         return *this;
     }
@@ -421,7 +418,7 @@ class JSON
     template<typename T>
     typename enable_if<is_floating_point<T>::value, JSON&>::type operator=(T f)
     {
-        SetType(Class::Floating);
+        set_type(Class::Floating);
         std::get<double>(Internal.data_) = f;
         return *this;
     }
@@ -430,26 +427,26 @@ class JSON
     typename enable_if<is_convertible<T, std::string>::value, JSON&>::type
     operator=(T s)
     {
-        SetType(Class::String);
+        set_type(Class::String);
         Internal.String = make_data_object<JSON_String>(s);
         return *this;
     }
 
     inline JSON& operator[](std::string const& key) noexcept
     {
-        SetType(Class::Object);
+        set_type(Class::Object);
         return Internal.Map.value()->operator[](key);
     }
 
     inline const JSON& operator[](std::string const& key) const noexcept
     {
-        SetType(Class::Object);
+        set_type(Class::Object);
         return Internal.Map.value()->operator[](key);
     }
 
     inline JSON& operator[](unsigned index) noexcept
     {
-        SetType(Class::Array);
+        set_type(Class::Array);
         if (index >= Internal.List.value()->size())
             Internal.List.value()->resize(index + 1);
 
@@ -463,7 +460,7 @@ class JSON
 
     inline const JSON& at(const std::string& key) const
     {
-        SetType(Class::Object);
+        set_type(Class::Object);
         return Internal.Map.value()->operator[](key);
     }
 
@@ -482,7 +479,7 @@ class JSON
             return 0UL;
     }
 
-    constexpr inline bool hasKey(const std::string& key) const
+    constexpr inline bool has_key(const std::string& key) const
     {
         if (Type == Class::Object) {
             return Internal.Map.value()->contains(key);
@@ -491,7 +488,7 @@ class JSON
         return false;
     }
 
-    std::vector<std::string> dumpKeys() const
+    std::vector<std::string> dump_keys() const
     {
         auto data = *Internal.Map.value();
         std::vector<std::string> keys{};
@@ -512,73 +509,50 @@ class JSON
             return -1UL;
     }
 
-    constexpr inline Class JSONType() const noexcept { return Type; }
+    constexpr inline Class JSON_type() const noexcept { return Type; }
 
-    constexpr inline bool IsNull() const { return Type == Class::Null; }
+    constexpr inline bool is_null() const { return Type == Class::Null; }
 
-    inline std::string ToString() const noexcept
+    constexpr inline JSON_String to_string() const noexcept
     {
-        bool b;
-        return ToString(b);
-    }
-    inline std::string ToString(bool& ok) const noexcept
-    {
-        ok = (Type == Class::String);
-        return ok ? json_escape(*(Internal.String.value())) : std::string("");
+        return Type == Class::String ? json_escape(*(Internal.String.value()))
+                                     : std::string("");
     }
 
-    inline double ToFloat() const noexcept
+    inline JSON_Deque to_deque() const noexcept
     {
-        bool b;
-        return ToFloat(b);
-    }
-    inline double ToFloat(bool& ok) const noexcept
-    {
-        ok = (Type == Class::Floating);
-        return ok ? std::get<double>(Internal.data_) : 0.0;
+        return Type == Class::Array ? *Internal.List.value()
+                                    : make_empty_list();
     }
 
-    inline long ToInt() const noexcept
+    inline JSON_Map to_map() const noexcept
     {
-        bool b;
-        return ToInt(b);
+        return Type == Class::Object ? *Internal.Map.value() : make_empty_map();
     }
 
-    inline long ToInt(bool& ok) const noexcept
+    constexpr inline double to_float() const noexcept
     {
-        ok = (Type == Class::Integral);
-        return ok ? std::get<long>(Internal.data_) : 0;
+        return Type == Class::Floating ? std::get<double>(Internal.data_) : 0.0;
     }
 
-    inline bool ToBool() const noexcept
+    constexpr inline long to_int() const noexcept
     {
-        bool b;
-        return ToBool(b);
-    }
-    inline bool ToBool(bool& ok) const noexcept
-    {
-        ok = (Type == Class::Boolean);
-        return ok ? std::get<bool>(Internal.data_) : false;
+        return Type == Class::Integral ? std::get<long>(Internal.data_) : 0;
     }
 
-    inline JSONWrapper<JSON_Map> ObjectRange() noexcept
+    constexpr inline bool to_bool() const noexcept
     {
-        return JSONWrapper<JSON_Map>(Internal.Map.value());
+        return Type == Class::Boolean ? std::get<bool>(Internal.data_) : false;
     }
 
-    inline JSONWrapper<JSON_Deque> ArrayRange() noexcept
+    inline JSON_Wrapper<JSON_Map> object_range() const noexcept
     {
-        return JSONWrapper<JSON_Deque>(Internal.List.value());
+        return JSON_Wrapper<JSON_Map>(Internal.Map.value());
     }
 
-    inline JSONConstWrapper<JSON_Map> ObjectRange() const noexcept
+    inline JSON_Wrapper<JSON_Deque> array_range() const noexcept
     {
-        return JSONConstWrapper<JSON_Map>(Internal.Map.value());
-    }
-
-    inline JSONConstWrapper<JSON_Deque> ArrayRange() const noexcept
-    {
-        return JSONConstWrapper<JSON_Deque>(Internal.List.value());
+        return JSON_Wrapper<JSON_Deque>(Internal.List.value());
     }
 
     std::string dump(int depth = 1, std::string tab = "  ") const noexcept
@@ -629,7 +603,7 @@ class JSON
     friend std::ostream& operator<<(std::ostream&, const JSON&);
 
   private:
-    inline void SetType(Class type) const noexcept
+    inline void set_type(Class type) const noexcept
     {
         if (type == Type)
             return;
@@ -665,22 +639,22 @@ class JSON
     mutable Class Type = Class::Null;
 };
 
-inline JSON Array() noexcept
+inline JSON array() noexcept
 {
-    return JSON::Make(JSON::Class::Array);
+    return JSON::make(JSON::Class::Array);
 }
 
 template<typename... T>
-inline JSON Array(T... args) noexcept
+inline JSON array(T... args) noexcept
 {
-    JSON arr = JSON::Make(JSON::Class::Array);
+    JSON arr = JSON::make(JSON::Class::Array);
     arr.append(args...);
     return arr;
 }
 
-inline JSON Object() noexcept
+inline JSON object() noexcept
 {
-    return JSON::Make(JSON::Class::Object);
+    return JSON::make(JSON::Class::Object);
 }
 
 namespace {
@@ -697,13 +671,13 @@ inline void consume_ws(std::string const& str, size_t& offset) noexcept
 
 JSON parse_object(std::string const& str, size_t& offset) noexcept
 {
-    JSON object = JSON::Make(JSON::Class::Object);
+    JSON obj = JSON::make(JSON::Class::Object);
 
     ++offset;
     consume_ws(str, offset);
     if (str[offset] == '}') {
         ++offset;
-        return object;
+        return obj;
     }
 
     while (true) {
@@ -716,7 +690,7 @@ JSON parse_object(std::string const& str, size_t& offset) noexcept
         }
         consume_ws(str, ++offset);
         JSON Value = parse_next(str, offset);
-        object[Key.ToString()] = Value;
+        obj[Key.to_string()] = Value;
 
         consume_ws(str, offset);
         if (str[offset] == ',') {
@@ -732,23 +706,23 @@ JSON parse_object(std::string const& str, size_t& offset) noexcept
         }
     }
 
-    return object;
+    return obj;
 }
 
 JSON parse_array(std::string const& str, size_t& offset) noexcept
 {
-    JSON array = JSON::Make(JSON::Class::Array);
+    JSON arr = JSON::make(JSON::Class::Array);
     unsigned index = 0;
 
     ++offset;
     consume_ws(str, offset);
     if (str[offset] == ']') {
         ++offset;
-        return array;
+        return arr;
     }
 
     while (true) {
-        array[index++] = parse_next(str, offset);
+        arr[index++] = parse_next(str, offset);
         consume_ws(str, offset);
 
         if (str[offset] == ',') {
@@ -760,11 +734,11 @@ JSON parse_array(std::string const& str, size_t& offset) noexcept
         } else {
             std::cerr << "ERROR: Array: Expected ',' or ']', found '"
                       << str[offset] << "'\n";
-            return JSON::Make(JSON::Class::Array);
+            return JSON::make(JSON::Class::Array);
         }
     }
 
-    return array;
+    return arr;
 }
 
 JSON parse_string(std::string const& str, size_t& offset) noexcept
@@ -809,7 +783,7 @@ JSON parse_string(std::string const& str, size_t& offset) noexcept
                             std::cerr << "ERROR: String: Expected hex "
                                          "character in unicode escape, found '"
                                       << c << "'\n";
-                            return JSON::Make(JSON::Class::String);
+                            return JSON::make(JSON::Class::String);
                         }
                     }
                     offset += 4;
@@ -857,14 +831,14 @@ JSON parse_number(std::string const& str, size_t& offset) noexcept
                 std::cerr
                     << "ERROR: Number: Expected a number for exponent, found '"
                     << c << "'\n";
-                return JSON::Make(JSON::Class::Null);
+                return JSON::make(JSON::Class::Null);
             } else
                 break;
         }
         exp = std::stol(exp_str);
     } else if (!isspace(c) && c != ',' && c != ']' && c != '}') {
         std::cerr << "ERROR: Number: unexpected character '" << c << "'\n";
-        return JSON::Make(JSON::Class::Null);
+        return JSON::make(JSON::Class::Null);
     }
     --offset;
 
@@ -888,9 +862,9 @@ JSON parse_bool(std::string const& str, size_t& offset) noexcept
     else {
         std::cerr << "ERROR: Bool: Expected 'true' or 'false', found '"
                   << str.substr(offset, 5) << "'\n";
-        return JSON::Make(JSON::Class::Null);
+        return JSON::make(JSON::Class::Null);
     }
-    offset += (Bool.ToBool() ? 4 : 5);
+    offset += (Bool.to_bool() ? 4 : 5);
     return Bool;
 }
 JSON parse_null(std::string const& str, size_t& offset)
@@ -899,7 +873,7 @@ JSON parse_null(std::string const& str, size_t& offset)
     if (str.substr(offset, 4) != "null") {
         std::cerr << "ERROR: Null: Expected 'null', found '"
                   << str.substr(offset, 4) << "'\n";
-        return JSON::Make(JSON::Class::Null);
+        return JSON::make(JSON::Class::Null);
     }
     offset += 4;
     return Null;
@@ -931,14 +905,28 @@ JSON parse_next(std::string const& str, size_t& offset) noexcept
 
 } // namespace
 
-/////////////////////
-// Main API function
-////////////////////
+///////////////////////
+// Main API functions
+//////////////////////
 
-inline JSON JSON::Load(std::string const& str) noexcept
+inline JSON JSON::load(std::string_view str) noexcept
 {
     size_t offset = 0;
-    return parse_next(str, offset);
+    return parse_next(str.data(), offset);
+}
+
+inline JSON JSON::load_file(std::string_view path)
+{
+    namespace fs = std::filesystem;
+    std::ifstream f(path.data(), std::ios::in | std::ios::binary);
+    const auto sz = fs::file_size(path);
+    std::string result(sz, '\0');
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+    f.read(result.data(), sz);
+#pragma GCC diagnostic pop
+
+    return JSON::load(result);
 }
 
 } // namespace json

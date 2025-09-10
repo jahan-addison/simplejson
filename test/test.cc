@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
                 std::string result(sz, '\0');
                 f.read(result.data(), sz);
 
-                JSON test_json = json::JSON::Load(result);
+                JSON test_json = json::JSON::load(result);
 
                 std::cout << std::endl << test_json.dump() << std::endl;
 
