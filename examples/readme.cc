@@ -15,7 +15,7 @@ int main()
     obj["new"]["some"]["deep"]["key"] = "Value";
     obj["array2"].append(false, "three");
 
-    // We can also parse astd::string into a JSON object:
+    // We can also parse a std::string into a JSON object:
     obj["parsed"] = json::JSON::load("[ { \"Key\" : \"Value\" }, false ]");
 
     std::cout << obj << std::endl;
