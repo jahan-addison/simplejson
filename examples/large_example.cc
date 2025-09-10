@@ -9,17 +9,6 @@ namespace fs = std::filesystem;
 
 using json::JSON;
 
-inline std::string read_file_from_path(std::string_view path)
-{
-    std::ifstream f(path.data(), std::ios::in | std::ios::binary);
-    const auto sz = fs::file_size(path);
-
-    std::string result(sz, '\0');
-    f.read(result.data(), sz);
-
-    return result;
-}
-
 int main()
 {
     std::string_view AST =
@@ -311,7 +300,7 @@ int main()
         "\"block\"\n      },\n      \"root\" : \"convert\"\n    }],\n  "
         "\"node\" : \"program\",\n  \"root\" : \"definitions\"\n}\n";
 
-    JSON large_json = json::JSON::Load(AST.data());
-    large_json.dumpKeys();
+    JSON large_json = json::JSON::load(AST.data());
+    large_json.dump_keys();
     std::cout << std::endl << large_json.dump() << std::endl;
 }

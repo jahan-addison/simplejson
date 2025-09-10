@@ -7,15 +7,15 @@ using json::JSON;
 int main()
 {
     // Example of creating each type
-    // You can also do JSON::Make( JSON::Class )
+    // You can also do JSON::make( JSON::Class )
     JSON null;
     JSON Bool(true);
     JSON Str("RawString");
     JSON Str2(std::string("C++String"));
     JSON Int(1);
     JSON Float(1.2);
-    JSON Arr = json::Array();
-    JSON Obj = json::Object();
+    JSON Arr = json::array();
+    JSON Obj = json::object();
 
     // Types can be overwritten by assigning
     // to the object again.
@@ -36,7 +36,7 @@ int main()
     // Arrays can be intialized with any elements and
     // they are turned into JSON objects. Variadic
     // Templates are pretty cool.
-    JSON Arr2 = json::Array(2, "Test", true);
+    JSON Arr2 = json::array(2, "Test", true);
 
     // Objects are accessed using operator[]( string ).
     // Will create new pairs on the fly, just as std::map
@@ -44,7 +44,7 @@ int main()
     Obj["Key1"] = 1.0;
     Obj["Key2"] = "Value";
 
-    JSON Obj2 = json::Object();
+    JSON Obj2 = json::object();
     Obj2["Key3"] = 1;
     Obj2["Key4"] = Arr;
     Obj2["Key5"] = Arr2;
