@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
-#include <concepts>
 #include <cstdint>
 #include <deque>
 #include <filesystem>
@@ -42,15 +41,9 @@
 
 namespace json {
 
-using std::enable_if;
-using std::initializer_list;
-using std::is_convertible;
-using std::is_floating_point;
-using std::is_integral;
-
 class JSON;
 
-namespace {
+namespace detail {
 
 using JSON_Deque = std::deque<JSON>;
 using JSON_String = std::string;
@@ -58,16 +51,28 @@ using JSON_Map = std::map<std::string, JSON>;
 using JSON_Deque_PTR = std::shared_ptr<JSON_Deque>;
 using JSON_String_PTR = std::shared_ptr<JSON_String>;
 using JSON_Map_PTR = std::shared_ptr<JSON_Map>;
-template<typename T>
-concept Object_Variant =
-    std::same_as<T, JSON_Deque> || std::same_as<T, JSON_String> ||
-    std::same_as<T, JSON_Map>;
-template<typename T>
-concept Object_Variant_Pointer =
-    std::same_as<T, JSON_Deque_PTR> || std::same_as<T, JSON_String_PTR> ||
-    std::same_as<T, JSON_Map_PTR>;
 
-constexpr std::string json_escape(const std::string& str)
+template<typename T>
+inline constexpr bool is_Object_Variant =
+    std::is_same_v<T, JSON_Deque> || std::is_same_v<T, JSON_String> ||
+    std::is_same_v<T, JSON_Map>;
+
+template<typename T>
+inline constexpr bool is_Object_Variant_Pointer =
+    std::is_same_v<T, JSON_Deque_PTR> || std::is_same_v<T, JSON_String_PTR> ||
+    std::is_same_v<T, JSON_Map_PTR>;
+
+template<typename Type, typename = std::enable_if_t<is_Object_Variant<Type>>>
+inline std::shared_ptr<Type> make_data_object(Type const& obj)
+{
+    return std::make_shared<Type>(obj);
+}
+
+#if __cplusplus >= 202002L
+constexpr inline std::string json_escape(std::string const& str)
+#else
+inline std::string json_escape(std::string const& str)
+#endif
 {
     std::string output;
     for (unsigned i = 0; i < str.length(); ++i)
@@ -100,13 +105,7 @@ constexpr std::string json_escape(const std::string& str)
     return output;
 }
 
-template<Object_Variant Type>
-inline std::shared_ptr<Type> make_data_object(Type const& obj)
-{
-    return std::make_shared<Type>(obj);
-}
-
-} // namespace
+} // namespace detail
 
 class JSON
 {
@@ -123,12 +122,13 @@ class JSON
     };
 
   public:
+  public:
     JSON()
         : Internal()
         , Type(Class::Null)
     {
     }
-    explicit JSON(initializer_list<JSON> list)
+    explicit JSON(std::initializer_list<JSON> list)
         : JSON()
     {
         set_type(Class::Object);
@@ -166,7 +166,7 @@ class JSON
     template<typename T>
     explicit JSON(
         T b,
-        typename enable_if<std::is_same<T, bool>::value>::type* = nullptr)
+        typename std::enable_if<std::is_same<T, bool>::value>::type* = nullptr)
         : Internal(b)
         , Type(Class::Boolean)
     {
@@ -175,8 +175,8 @@ class JSON
     template<typename T>
     explicit JSON(
         T i,
-        typename enable_if<is_integral<T>::value &&
-                           !std::is_same<T, bool>::value>::type* = nullptr)
+        typename std::enable_if<std::is_integral<T>::value &&
+                                !std::is_same<T, bool>::value>::type* = nullptr)
         : Internal(static_cast<long>(i))
         , Type(Class::Integral)
     {
@@ -185,7 +185,8 @@ class JSON
     template<typename T>
     explicit JSON(
         T f,
-        typename enable_if<is_floating_point<T>::value>::type* = nullptr)
+        typename std::enable_if<std::is_floating_point<T>::value>::type* =
+            nullptr)
         : Internal(static_cast<double>(f))
         , Type(Class::Floating)
     {
@@ -194,8 +195,8 @@ class JSON
     template<typename T>
     explicit JSON(
         T s,
-        typename enable_if<is_convertible<T, std::string>::value>::type* =
-            nullptr)
+        typename std::enable_if<
+            std::is_convertible<T, std::string>::value>::type* = nullptr)
         : Internal(std::string(s))
         , Type(Class::String)
     {
@@ -205,11 +206,6 @@ class JSON
     // internal STL-container
     struct internal
     {
-        using data = std::variant<std::monostate, long, double, bool>;
-        using object = std::variant<JSON_Deque, JSON_String, JSON_Map>;
-
-        internal() = default;
-
         explicit internal(long i)
             : data_{ i }
         {
@@ -223,24 +219,15 @@ class JSON
         {
         }
         explicit internal(std::string const& i)
-            : String(make_data_object<JSON_String>(i))
+            : String(detail::make_data_object<detail::JSON_String>(i))
         {
         }
-        template<Object_Variant_Pointer Type>
-        explicit internal(Type&& i)
-        {
-            if constexpr (std::is_same_v<Type, JSON_Map>) {
-                Map = std::move(i);
-            } else if constexpr (std::is_same_v<Type, JSON_String>) {
-                String = std::move(i);
-            } else if constexpr (std::is_same_v<Type, JSON_Deque>) {
-                List = std::move(i);
-            }
-        }
-        std::optional<JSON_Deque_PTR> List;
-        std::optional<JSON_String_PTR> String;
-        std::optional<JSON_Map_PTR> Map;
-        data data_ = std::monostate();
+        internal() = default;
+        std::optional<detail::JSON_Deque_PTR> List;
+        std::optional<detail::JSON_String_PTR> String;
+        std::optional<detail::JSON_Map_PTR> Map;
+        std::variant<std::monostate, long, double, bool> data_ =
+            std::monostate();
     };
 
   public:
@@ -251,47 +238,53 @@ class JSON
         return os;
     }
 
-    template<Object_Variant Type>
+    template<typename Type,
+             typename = std::enable_if<detail::is_Object_Variant<Type>>>
     friend std::optional<std::shared_ptr<Type>> make_data_object()
     {
-        if constexpr (std::is_same_v<Type, JSON_Map>) {
+        if constexpr (std::is_same_v<Type, detail::JSON_Map>) {
             return std::make_shared<Type>(std::map<std::string, JSON>{});
-        } else if constexpr (std::is_same_v<Type, JSON_String>) {
+        } else if constexpr (std::is_same_v<Type, detail::JSON_String>) {
             return std::make_shared<Type>(std::string{});
-        } else if constexpr (std::is_same_v<Type, JSON_Deque>) {
-            return std::make_shared<JSON_Deque>(std::deque<JSON>{});
+        } else if constexpr (std::is_same_v<Type, detail::JSON_Deque>) {
+            return std::make_shared<detail::JSON_Deque>(std::deque<JSON>{});
         } else {
             return std::make_shared<Type>(std::map<std::string, JSON>{});
         }
     }
+
     inline auto make_empty_map() const noexcept
     {
         return std::map<std::string, JSON>{};
     }
     inline auto make_empty_list() const noexcept { return std::deque<JSON>{}; }
-
+#if __cplusplus >= 202002L
     constexpr inline auto make_empty_string() const noexcept
+#else
+    inline auto make_empty_string() const noexcept
+#endif
     {
         return std::string{};
     }
 
-    template<Object_Variant Type>
+    template<typename Type,
+             typename = std::enable_if<detail::is_Object_Variant<Type>>>
     constexpr Type get_safe_data_object(
         std::optional<std::shared_ptr<Type>> const& obj)
     {
-        if constexpr (std::is_same_v<Type, JSON_Map>) {
+        if constexpr (std::is_same_v<Type, detail::JSON_Map>) {
             if (obj.has_value())
                 return *(obj.value());
             else
                 return make_empty_map();
         }
-        if constexpr (std::is_same_v<Type, JSON_String>) {
+        if constexpr (std::is_same_v<Type, detail::JSON_String>) {
             if (obj.has_value())
                 return *(obj.value());
             else
                 return make_empty_string();
         }
-        if constexpr (std::is_same_v<Type, JSON_Deque>) {
+        if constexpr (std::is_same_v<Type, detail::JSON_Deque>) {
             if (obj.has_value())
                 return *(obj.value());
             else
@@ -299,7 +292,8 @@ class JSON
         }
     }
 
-    template<Object_Variant Container>
+    template<typename Container,
+             typename = std::enable_if<detail::is_Object_Variant<Container>>>
     class JSON_Wrapper
     {
         using Container_PTR = std::shared_ptr<Container>;
@@ -339,7 +333,8 @@ class JSON
         }
     };
 
-    template<Object_Variant Container>
+    template<typename Container,
+             typename = std::enable_if<detail::is_Object_Variant<Container>>>
     class JSON_Const_Wrapper
     {
         using Container_PTR = std::shared_ptr<Container>;
@@ -398,7 +393,8 @@ class JSON
     }
 
     template<typename T>
-    typename enable_if<std::is_same<T, bool>::value, JSON&>::type operator=(T b)
+    typename std::enable_if<std::is_same<T, bool>::value, JSON&>::type
+    operator=(T b)
     {
         set_type(Class::Boolean);
         Internal.data_ = b;
@@ -406,8 +402,9 @@ class JSON
     }
 
     template<typename T>
-    typename enable_if<is_integral<T>::value && !std::is_same<T, bool>::value,
-                       JSON&>::type
+    typename std::enable_if<std::is_integral<T>::value &&
+                                !std::is_same<T, bool>::value,
+                            JSON&>::type
     operator=(T i)
     {
         set_type(Class::Integral);
@@ -416,7 +413,8 @@ class JSON
     }
 
     template<typename T>
-    typename enable_if<is_floating_point<T>::value, JSON&>::type operator=(T f)
+    typename std::enable_if<std::is_floating_point<T>::value, JSON&>::type
+    operator=(T f)
     {
         set_type(Class::Floating);
         std::get<double>(Internal.data_) = f;
@@ -424,11 +422,12 @@ class JSON
     }
 
     template<typename T>
-    typename enable_if<is_convertible<T, std::string>::value, JSON&>::type
+    typename std::enable_if<std::is_convertible<T, std::string>::value,
+                            JSON&>::type
     operator=(T s)
     {
         set_type(Class::String);
-        Internal.String = make_data_object<JSON_String>(s);
+        Internal.String = detail::make_data_object<detail::JSON_String>(s);
         return *this;
     }
 
@@ -482,7 +481,12 @@ class JSON
     constexpr inline bool has_key(const std::string& key) const
     {
         if (Type == Class::Object) {
+#if __cplusplus >= 202002L
             return Internal.Map.value()->contains(key);
+#else
+            return Internal.Map.value()->find(key) !=
+                   Internal.Map.value()->end();
+#endif
         }
 
         return false;
@@ -513,19 +517,24 @@ class JSON
 
     constexpr inline bool is_null() const { return Type == Class::Null; }
 
-    constexpr inline JSON_String to_string() const noexcept
+#if __cplusplus >= 202002L
+    constexpr inline detail::JSON_String to_string() const noexcept
+#else
+    inline detail::JSON_String to_string() const noexcept
+#endif
     {
-        return Type == Class::String ? json_escape(*(Internal.String.value()))
-                                     : std::string("");
+        return Type == Class::String
+                   ? detail::json_escape(*(Internal.String.value()))
+                   : std::string("");
     }
 
-    inline JSON_Deque to_deque() const noexcept
+    inline detail::JSON_Deque to_deque() const noexcept
     {
         return Type == Class::Array ? *Internal.List.value()
                                     : make_empty_list();
     }
 
-    inline JSON_Map to_map() const noexcept
+    inline detail::JSON_Map to_map() const noexcept
     {
         return Type == Class::Object ? *Internal.Map.value() : make_empty_map();
     }
@@ -545,14 +554,14 @@ class JSON
         return Type == Class::Boolean ? std::get<bool>(Internal.data_) : false;
     }
 
-    inline JSON_Wrapper<JSON_Map> object_range() const noexcept
+    inline JSON_Wrapper<detail::JSON_Map> object_range() const noexcept
     {
-        return JSON_Wrapper<JSON_Map>(Internal.Map.value());
+        return JSON_Wrapper<detail::JSON_Map>(Internal.Map.value());
     }
 
-    inline JSON_Wrapper<JSON_Deque> array_range() const noexcept
+    inline JSON_Wrapper<detail::JSON_Deque> array_range() const noexcept
     {
-        return JSON_Wrapper<JSON_Deque>(Internal.List.value());
+        return JSON_Wrapper<detail::JSON_Deque>(Internal.List.value());
     }
 
     std::string dump(int depth = 1, std::string tab = "  ") const noexcept
@@ -589,7 +598,8 @@ class JSON
                 return s;
             }
             case Class::String:
-                return "\"" + json_escape(*(Internal.String.value())) + "\"";
+                return "\"" + detail::json_escape(*(Internal.String.value())) +
+                       "\"";
             case Class::Floating:
                 return std::to_string(std::get<double>(Internal.data_));
             case Class::Integral:
@@ -612,14 +622,16 @@ class JSON
             case Class::Null:
                 break;
             case Class::Object:
-                Internal.Map = make_data_object<JSON_Map>(make_empty_map());
+                Internal.Map = detail::make_data_object<detail::JSON_Map>(
+                    make_empty_map());
                 break;
             case Class::Array:
-                Internal.List = make_data_object<JSON_Deque>(make_empty_list());
+                Internal.List = detail::make_data_object<detail::JSON_Deque>(
+                    make_empty_list());
                 break;
             case Class::String:
-                Internal.String =
-                    make_data_object<JSON_String>(make_empty_string());
+                Internal.String = detail::make_data_object<detail::JSON_String>(
+                    make_empty_string());
                 break;
             case Class::Floating:
                 Internal.data_ = static_cast<double>(0.0);
@@ -657,9 +669,7 @@ inline JSON object() noexcept
     return JSON::make(JSON::Class::Object);
 }
 
-namespace {
-
-// json construction functions
+namespace detail {
 
 JSON parse_next(std::string const&, size_t&) noexcept;
 
@@ -903,7 +913,7 @@ JSON parse_next(std::string const& str, size_t& offset) noexcept
     return JSON();
 }
 
-} // namespace
+} // namespace detail
 
 ///////////////////////
 // Main API functions
@@ -912,7 +922,7 @@ JSON parse_next(std::string const& str, size_t& offset) noexcept
 inline JSON JSON::load(std::string_view str) noexcept
 {
     size_t offset = 0;
-    return parse_next(str.data(), offset);
+    return detail::parse_next(str.data(), offset);
 }
 
 inline JSON JSON::load_file(std::string_view path)

@@ -2,7 +2,7 @@
 
 simplejson++ is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson++ is a single C++ Header file, "simplejson.h".
 
-simplejson++ requires at least C++20, and has been tested with clang-18 and gcc-10 on macOS (arm) and Ubuntu.
+simplejson++ requires at least C++17, and has been tested with clang-18 and gcc-10 on macOS (arm) and Ubuntu.
 
 This library was primarily created for [Credence](https://github.com/jahan-addison/credence/).
 
@@ -32,7 +32,7 @@ include(FetchContent)
 FetchContent_Declare(
     simplejson
     GIT_REPOSITORY https://github.com/jahan-addison/simplejson.git
-    GIT_TAG v1.1.4
+    GIT_TAG v1.1.6
 )
 
 FetchContent_MakeAvailable(simplejson)
