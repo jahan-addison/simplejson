@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.1.8
+  VERSION 1.1.12
   LANGUAGES CXX
 )
 
@@ -17,33 +17,24 @@ include(CMakeDependentOption)
 include(cmake/CPM.cmake)
 include(Warnings)
 
-cmake_dependent_option(BUILD_EXAMPLES
+cmake_dependent_option(SIMPLEJSON_BUILD_EXAMPLES
     "Enable ${PROJECT_NAME} project example targets" OFF
-    "BUILD_EXAMPLES" OFF
+    "SIMPLEJSON_BUILD_EXAMPLES" OFF
 )
 
-cmake_dependent_option(BUILD_TESTS
+cmake_dependent_option(SIMPLEJSON_BUILD_TESTS
     "Enable ${PROJECT_NAME} project tests targets" OFF
-    "BUILD_TESTS" OFF
+    "SIMPLEJSON_BUILD_TESTS" OFF
 )
 
 CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
-
-CPMAddPackage(
-  NAME catch2
-  VERSION 3.10.0
-  GITHUB_REPOSITORY catchorg/Catch2
-)
-
-list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/contrib")
 
 if(USE_SANITIZER)
     include(${cmake-scripts_SOURCE_DIR}/sanitizers.cmake)
 endif()
 
 include(${cmake-scripts_SOURCE_DIR}/tools.cmake)
-
 
 # Define the header-only library
 add_library(${PROJECT_NAME} INTERFACE)
@@ -54,22 +45,32 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:include>
 )
 
-if(BUILD_TESTS)
+if(SIMPLEJSON_BUILD_TESTS)
+  set(BUILD_TESTING OFF)
+  include(FetchContent)
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        v3.10.0
+  )
+
+  FetchContent_MakeAvailable(Catch2)
+
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc")
   add_executable(Test_Suite "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
   set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 17)
 
-  target_link_libraries(Test_Suite PUBLIC simplejson Catch2WithMain)
+  target_link_libraries(Test_Suite PRIVATE simplejson Catch2WithMain)
 
   # C++20
   add_executable(Test_Suite_CPP20 "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
   set_target_properties(Test_Suite_CPP20 PROPERTIES CXX_STANDARD 20)
-  target_link_libraries(Test_Suite_CPP20 PUBLIC simplejson Catch2WithMain)
+  target_link_libraries(Test_Suite_CPP20 PRIVATE simplejson Catch2WithMain)
 
 endif()
 
-if(BUILD_EXAMPLES)
+if(SIMPLEJSON_BUILD_EXAMPLES)
 
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cc")
@@ -86,6 +87,6 @@ if(BUILD_EXAMPLES)
                               $<INSTALL_INTERFACE:${example_name}-${PROJECT_VERSION}>
       )
 
-      target_link_libraries(${example_name} PUBLIC simplejson)
+      target_link_libraries(${example_name} PRIVATE simplejson)
   endforeach()
 endif()

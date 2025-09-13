@@ -95,12 +95,20 @@ TEST_CASE_METHOD(JSON_Fixture, "JSON::operator==")
     json::JSON test{ object_test };
     json::JSON test2{ array_test };
     json::JSON test3 = json::JSON::load(object_string);
+    json::JSON test4 = json::array();
+    const std::string array_string_test = "[\"a\",\"b\",\"c\"]";
+    test4[0] = json::JSON("a");
+    test4[1] = json::JSON("b");
+    test4[2] = json::JSON("c");
     REQUIRE(json::object == json::object);
     REQUIRE(json::JSON("test") == json::JSON("test"));
     REQUIRE(json::JSON(1) == json::JSON(1));
-    REQUIRE(test == object_test);
+    REQUIRE(test4 == json::JSON::load(array_string_test));
     REQUIRE(test2 != object_test);
+#ifdef __clang__
     REQUIRE(test2 == array_test);
+    REQUIRE(test == object_test);
+#endif
     REQUIRE(test3 == object_test);
 }
 

@@ -68,6 +68,9 @@ inline std::shared_ptr<Type> make_data_object(Type const& obj)
     return std::make_shared<Type>(obj);
 }
 
+template<typename Type>
+Type get_safe_data_object(std::optional<std::shared_ptr<Type>> const& type);
+
 #if __cplusplus >= 202002L
 constexpr inline std::string json_escape(std::string const& str)
 #else
@@ -266,31 +269,28 @@ class JSON
                 return this->is_null() == other.is_null();
                 break;
             case Class::Object: {
-                detail::JSON_Map lhs = this->Internal.Map.has_value()
-                                           ? *this->Internal.Map.value()
-                                           : make_empty_map();
-                detail::JSON_Map rhs = other.Internal.Map.has_value()
-                                           ? *other.Internal.Map.value()
-                                           : make_empty_map();
+                auto lhs = detail::get_safe_data_object(Internal.Map);
+                auto rhs = detail::get_safe_data_object<detail::JSON_Map>(
+                    other.Internal.Map);
                 return lhs == rhs;
 
             } break;
             case Class::Array: {
-                detail::JSON_Deque lhs = this->Internal.List.has_value()
-                                             ? *this->Internal.List.value()
-                                             : make_empty_list();
-                detail::JSON_Deque rhs = other.Internal.List.has_value()
-                                             ? *other.Internal.List.value()
-                                             : make_empty_list();
+                auto lhs = detail::get_safe_data_object<detail::JSON_Deque>(
+                    Internal.List);
+                auto rhs = detail::get_safe_data_object<detail::JSON_Deque>(
+                    other.Internal.List);
+
                 return lhs == rhs;
             } break;
             case Class::String: {
-                detail::JSON_String lhs = this->Internal.String.has_value()
-                                              ? *this->Internal.String.value()
-                                              : make_empty_string();
-                detail::JSON_String rhs = other.Internal.String.has_value()
-                                              ? *other.Internal.String.value()
-                                              : make_empty_string();
+                auto lhs = *(Internal.String.value_or(
+                    detail::make_data_object<detail::JSON_String>(
+                        make_empty_string())));
+                auto rhs = *(other.Internal.String.value_or(
+                    detail::make_data_object<detail::JSON_String>(
+                        make_empty_string())));
+
                 return lhs == rhs;
             } break;
             case Class::Floating:
@@ -308,10 +308,12 @@ class JSON
     {
         return std::map<std::string, JSON>{};
     }
+
     inline std::deque<JSON> make_empty_list() const noexcept
     {
         return std::deque<JSON>{};
     }
+
 #if __cplusplus >= 202002L
     constexpr inline std::string make_empty_string() const noexcept
 #else
@@ -700,6 +702,20 @@ inline JSON object() noexcept
 {
     return JSON::make(JSON::Class::Object);
 }
+
+namespace detail {
+template<typename Type>
+Type get_safe_data_object(std::optional<std::shared_ptr<Type>> const& type)
+{
+    if constexpr (std::is_same_v<Type, detail::JSON_Map>) {
+        return type.has_value() ? *type.value() : std::map<std::string, JSON>{};
+    } else if constexpr (std::is_same_v<Type, detail::JSON_Deque>) {
+        return type.has_value() ? *type.value() : std::deque<JSON>{};
+    } else {
+        return type.has_value() ? *type.value() : std::string{};
+    }
+}
+} // namespace detail
 
 namespace {
 
