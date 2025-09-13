@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.1.10
+  VERSION 1.1.11
   LANGUAGES CXX
 )
 
@@ -30,23 +30,22 @@ cmake_dependent_option(SIMPLEJSON_BUILD_TESTS
 CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")
 CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.8.0")
 
-CPMAddPackage(
-  NAME catch2
-  VERSION 3.10.0
-  GITHUB_REPOSITORY catchorg/Catch2
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.10.0
 )
 
-set(CATCH_BUILD_TESTING OFF)
-set(CATCH_INSTALL_DOCS OFF)
+FetchContent_MakeAvailable(Catch2)
 
-list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/contrib")
+set(BUILD_TESTING OFF)
 
 if(USE_SANITIZER)
     include(${cmake-scripts_SOURCE_DIR}/sanitizers.cmake)
 endif()
 
 include(${cmake-scripts_SOURCE_DIR}/tools.cmake)
-
 
 # Define the header-only library
 add_library(${PROJECT_NAME} INTERFACE)

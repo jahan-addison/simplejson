@@ -57,7 +57,7 @@ jobs:
     - name: build
       run: |
         # make with -fsanitize
-        cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DBUILD_TESTS=ON
+        cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER="Address;Undefined" -DSIMPLEJSON_BUILD_TESTS=ON
 
     - name: test
       run: |
@@ -71,7 +71,7 @@ jobs:
       run: |
         # Build for valgrind without -fsanitize
         rm -rf build
-        cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON
+        cmake -Bbuild -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DSIMPLEJSON_BUILD_TESTS=ON -DSIMPLEJSON_BUILD_EXAMPLES=ON
         cmake --build build
         valgrind --leak-check=full --show-leak-kinds=all ./build/large_example
         valgrind --leak-check=full --show-leak-kinds=all ./build/readme

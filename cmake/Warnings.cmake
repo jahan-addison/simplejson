@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16...3.29)
 
 option(ENABLE_WARNINGS_SETTINGS "Allow target_set_warnings to add flags and defines. Set this to OFF if you want to provide your own warning parameters." ON)
 
