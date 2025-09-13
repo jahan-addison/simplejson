@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.1.8
+  VERSION 1.1.10
   LANGUAGES CXX
 )
 
@@ -17,14 +17,14 @@ include(CMakeDependentOption)
 include(cmake/CPM.cmake)
 include(Warnings)
 
-cmake_dependent_option(BUILD_EXAMPLES
+cmake_dependent_option(SIMPLEJSON_BUILD_EXAMPLES
     "Enable ${PROJECT_NAME} project example targets" OFF
-    "BUILD_EXAMPLES" OFF
+    "SIMPLEJSON_BUILD_EXAMPLES" OFF
 )
 
-cmake_dependent_option(BUILD_TESTS
+cmake_dependent_option(SIMPLEJSON_BUILD_TESTS
     "Enable ${PROJECT_NAME} project tests targets" OFF
-    "BUILD_TESTS" OFF
+    "SIMPLEJSON_BUILD_TESTS" OFF
 )
 
 CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")
@@ -35,6 +35,9 @@ CPMAddPackage(
   VERSION 3.10.0
   GITHUB_REPOSITORY catchorg/Catch2
 )
+
+set(CATCH_BUILD_TESTING OFF)
+set(CATCH_INSTALL_DOCS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/contrib")
 
@@ -54,22 +57,22 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:include>
 )
 
-if(BUILD_TESTS)
+if(SIMPLEJSON_BUILD_TESTS)
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc")
   add_executable(Test_Suite "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
   set_target_properties(Test_Suite PROPERTIES CXX_STANDARD 17)
 
-  target_link_libraries(Test_Suite PUBLIC simplejson Catch2WithMain)
+  target_link_libraries(Test_Suite PRIVATE simplejson Catch2WithMain)
 
   # C++20
   add_executable(Test_Suite_CPP20 "${CMAKE_CURRENT_SOURCE_DIR}/test/test.cc")
   set_target_properties(Test_Suite_CPP20 PROPERTIES CXX_STANDARD 20)
-  target_link_libraries(Test_Suite_CPP20 PUBLIC simplejson Catch2WithMain)
+  target_link_libraries(Test_Suite_CPP20 PRIVATE simplejson Catch2WithMain)
 
 endif()
 
-if(BUILD_EXAMPLES)
+if(SIMPLEJSON_BUILD_EXAMPLES)
 
   file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
   file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cc")
@@ -86,6 +89,6 @@ if(BUILD_EXAMPLES)
                               $<INSTALL_INTERFACE:${example_name}-${PROJECT_VERSION}>
       )
 
-      target_link_libraries(${example_name} PUBLIC simplejson)
+      target_link_libraries(${example_name} PRIVATE simplejson)
   endforeach()
 endif()

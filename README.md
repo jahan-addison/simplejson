@@ -33,7 +33,7 @@ include(FetchContent)
 FetchContent_Declare(
     simplejson
     GIT_REPOSITORY https://github.com/jahan-addison/simplejson.git
-    GIT_TAG v1.1.8
+    GIT_TAG v1.1.10
 )
 
 FetchContent_MakeAvailable(simplejson)

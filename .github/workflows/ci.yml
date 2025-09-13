@@ -66,7 +66,6 @@ jobs:
         ./build/Test_Suite
         ./build/Test_Suite_CPP20
 
-
     - name: memcheck
       if: startsWith(matrix.os, 'ubuntu')
       run: |
