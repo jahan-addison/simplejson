@@ -1,8 +1,8 @@
 # simplejson++
 
-simplejson++ is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson++ is a single C++ Header file, "simplejson.h".
+simplejson++ is a lightweight JSON library for exporting data in JSON format from C++. Due to its design, you're able to create and work with JSON objects right away, just as you would expect from a language such as JavaScript. simplejson++ is a single C++ header file, "simplejson.h".
 
-simplejson++ requires at least C++17, and has been tested with clang-18 and gcc-10 on macOS (arm) and Ubuntu.
+simplejson++ requires at least **C++17**, and has been tested with clang-18 and gcc-10 on macOS (arm) and Ubuntu.
 
 This library was primarily created for [Credence](https://github.com/jahan-addison/credence/).
 
@@ -14,14 +14,14 @@ This library was primarily created for [Credence](https://github.com/jahan-addis
 * STL-container type conversion and range access helpers for data types
 * [No memory leaks](https://github.com/jahan-addison/simplejson/actions/runs/17600602459/job/50001743753#step:8:661)
 * Total header size is _25kb_
-* No dependencies, and strong test suite
-* Compiles with Address, Undefined fsanitizers; valgrind; and `-Wall -Wextra -Werror -Wpedantic`
+* No dependencies
+* Compiles with Address, Undefined `-fsanitizers`
 * Uses `constexpr` and `const` where possible
 * Easy library installation via `FetchContent` or copying the header
-* No use of `new` and `delete`
+* No use of `new` and `delete`, with no `null` usage
   * Uses `shared_ptr` where necessary, with no dangling pointers
 
-See the api and example below, more in `examples/` directory.
+See the API and example below, more in `examples/` directory.
 
 ## Installation
 
@@ -45,34 +45,39 @@ target_include_directories(${PROJECT_NAME} PUBLIC simplejson)
 
 ```
 
-### Example
+## Example
 
 ```C++
+#include <iostream>
 #include <simplejson.h>
 
-int main() {
-  json::JSON obj;
-  // Create a new Array as a field of an Object.
-  obj["array"] = json::array( true, "Two", 3, 4.0 );
-  // Create a new Object as a field of another Object.
-  obj["obj"] = json::object();
-  // Assign to one of the inner object's fields
-  obj["obj"]["inner"] = "Inside";
+int main()
+{
+    json::JSON obj;
+    // Create a new Array as a field of an Object
+    obj["array"] = json::array(true, "Two", 3, 4.0);
+    // Create a new Object as a field of another Object
+    obj["obj"] = json::object();
+    // Assign to one of the inner object's fields
+    obj["obj"]["inner"] = "Inside";
 
-  // We don't need to specify the type of the JSON object:
-  obj["new"]["some"]["deep"]["key"] = "Value";
-  obj["array2"].append( false, "three" );
+    // We don't need to specify the type of the JSON object:
+    obj["new"]["some"]["deep"]["key"] = "Value";
+    obj["array2"].append(false, "three");
 
-  // We can also parse a std::string into a JSON object:
-  obj["parsed"] = json::JSON::load( "[ { \"Key\" : \"Value\" }, false ]" );
-
-  std::cout << obj << std::endl;
+    // We can also parse a std::string into a JSON object:
+    obj["parsed"] = json::JSON::load("[ { \"Key\" : \"Value\" }, false ]");
+    // Convert the second JSON array into a std::deque<JSON>
+    auto my_array = obj["array2"].to_deque();
+    // Dump the whole object
+    std::cout << obj << std::endl;
+    // Dump the last element in "array2" as a string ( "three" )
+    std::cout << my_array.back().to_string() << std::endl;
 }
+
 ```
 
 ## API
-
-### Overview
 
 ```C++
 namespace json {
@@ -241,3 +246,7 @@ namespace json {
     };
 }
 ```
+
+## License
+
+Apache License v2

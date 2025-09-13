@@ -4,9 +4,9 @@
 int main()
 {
     json::JSON obj;
-    // Create a new Array as a field of an Object.
+    // Create a new Array as a field of an Object
     obj["array"] = json::array(true, "Two", 3, 4.0);
-    // Create a new Object as a field of another Object.
+    // Create a new Object as a field of another Object
     obj["obj"] = json::object();
     // Assign to one of the inner object's fields
     obj["obj"]["inner"] = "Inside";
@@ -17,6 +17,10 @@ int main()
 
     // We can also parse a std::string into a JSON object:
     obj["parsed"] = json::JSON::load("[ { \"Key\" : \"Value\" }, false ]");
-
+    // Convert the second JSON array into a std::deque<JSON>
+    auto my_array = obj["array2"].to_deque();
+    // Dump the whole object
     std::cout << obj << std::endl;
+    // Dump the last element in "array2" as a string ( "three" )
+    std::cout << my_array.back().to_string() << std::endl;
 }
