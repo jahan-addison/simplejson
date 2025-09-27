@@ -139,6 +139,16 @@ class JSON
             this->operator[](i.to_string()) = i;
         }
     }
+
+    explicit JSON(detail::JSON_Deque const& list)
+        : JSON()
+    {
+        set_type(Class::Array);
+        for (auto const& i : list) {
+            append(i);
+        }
+    }
+
     explicit JSON(JSON&& other)
         : Internal(std::move(other.Internal))
         , Type(std::move(other.Type))

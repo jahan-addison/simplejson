@@ -6,7 +6,7 @@ endif()
 
 project(
   simplejson
-  VERSION 1.1.12
+  VERSION 1.1.13
   LANGUAGES CXX
 )
 

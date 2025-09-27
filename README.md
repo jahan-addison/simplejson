@@ -33,7 +33,7 @@ include(FetchContent)
 FetchContent_Declare(
     simplejson
     GIT_REPOSITORY https://github.com/jahan-addison/simplejson.git
-    GIT_TAG v1.1.12
+    GIT_TAG v1.1.13
 )
 
 FetchContent_MakeAvailable(simplejson)
@@ -164,6 +164,8 @@ namespace json {
         JSON( bool_type );
         JSON( numeric_type );
         JSON( null_type );
+
+        JSON( deque<JSON> );
 
         /**
             Copy/Move Constructors
